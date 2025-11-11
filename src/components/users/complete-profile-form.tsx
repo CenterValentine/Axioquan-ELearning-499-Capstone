@@ -12,6 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ProfileImageUpload } from './profile-image-upload';
 import { updateUserProfile, getUserProfile } from '@/lib/auth/profile-actions';
 import { toast } from 'sonner';
+import { ProfileCompletionProgress } from './profile-completion-progress';
+import { SkillsDisplay } from './skills-display';
+import { SocialLinksPreview } from './social-links-preview';
+import { ProfileExport } from './profile-export';
+import { QuickActions } from './quick-actions';
 
 // Enhanced profile validation schema
 const profileSchema = z.object({
@@ -49,6 +54,7 @@ export function CompleteProfileForm() {
   const [profileImage, setProfileImage] = useState('');
   const [userName, setUserName] = useState('');
   const [profileData, setProfileData] = useState<any>(null);
+  const [userRole, setUserRole] = useState('');
 
   const {
     register,
@@ -61,8 +67,14 @@ export function CompleteProfileForm() {
     resolver: zodResolver(profileSchema),
   });
 
-  // Watch bio for character count
+  // Watch form values for real-time previews
   const bioValue = watch('bio') || '';
+  const twitterUsername = watch('twitter_username');
+  const githubUsername = watch('github_username');
+  const linkedinUrl = watch('linkedin_url');
+  const youtubeChannel = watch('youtube_channel');
+  const website = watch('website');
+  const skillsValue = watch('skills');
 
   // Load profile data on component mount
   useEffect(() => {
@@ -77,6 +89,7 @@ export function CompleteProfileForm() {
         setProfileData(result.profile);
         setProfileImage(result.profile.image || '');
         setUserName(result.profile.name || result.profile.username);
+        setUserRole(result.profile.primary_role || 'student');
         
         // Set form values
         reset({
@@ -121,6 +134,8 @@ export function CompleteProfileForm() {
       if (result.success) {
         toast.success('Profile updated successfully!');
         setUserName(data.name);
+        // Reload profile data to update completion progress
+        await loadProfileData();
       } else {
         toast.error('Update failed', {
           description: result.errors?.[0] || result.message,
@@ -135,6 +150,34 @@ export function CompleteProfileForm() {
     }
   };
 
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'edit-profile':
+        // Scroll to top of form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      case 'change-password':
+        // Navigate to change password page
+        window.location.href = '/dashboard/change-password';
+        break;
+      case 'request-upgrade':
+        // Navigate to role upgrade page
+        window.location.href = '/dashboard/request-upgrade';
+        break;
+      case 'privacy-settings':
+        toast.info('Privacy settings coming soon!');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleSkillClick = (skill: string) => {
+    toast.info(`Skill: ${skill}`, {
+      description: 'This could link to skill-specific features in the future.',
+    });
+  };
+
   if (isLoadingProfile) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -144,7 +187,7 @@ export function CompleteProfileForm() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Profile Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">Complete Your Profile</h1>
@@ -153,9 +196,12 @@ export function CompleteProfileForm() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Profile Image */}
-        <div className="lg:col-span-1">
+      {/* Profile Completion Progress */}
+      <ProfileCompletionProgress profile={profileData} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Column - Profile Image & Quick Actions */}
+        <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Profile Photo</CardTitle>
@@ -171,10 +217,25 @@ export function CompleteProfileForm() {
               />
             </CardContent>
           </Card>
+
+          {/* Quick Actions */}
+          <QuickActions 
+            userRole={userRole} 
+            onAction={handleQuickAction} 
+          />
+
+          {/* Social Links Preview */}
+          <SocialLinksPreview
+            twitter_username={twitterUsername}
+            github_username={githubUsername}
+            linkedin_url={linkedinUrl}
+            youtube_channel={youtubeChannel}
+            website={website}
+          />
         </div>
 
         {/* Right Column - Profile Form */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <Card>
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>
@@ -368,7 +429,18 @@ export function CompleteProfileForm() {
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-medium mb-4">Skills & Interests</h3>
                   
-                  {/* Skills */}
+                  {/* Skills Preview */}
+                  {skillsValue && (
+                    <div className="mb-4">
+                      <label className="text-sm font-medium mb-2 block">Skills Preview</label>
+                      <SkillsDisplay 
+                        skills={skillsValue.split(',').map(s => s.trim()).filter(s => s)}
+                        onSkillClick={handleSkillClick}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Skills Input */}
                   <div className="space-y-2 mb-4">
                     <label htmlFor="skills" className="text-sm font-medium">
                       Skills
@@ -411,8 +483,10 @@ export function CompleteProfileForm() {
                   </div>
                 </div>
 
-                {/* Submit Button */}
-                <div className="flex justify-end pt-4">
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <ProfileExport profile={profileData} />
+                  
                   <Button
                     type="submit"
                     disabled={isLoading}

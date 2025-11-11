@@ -1,9 +1,7 @@
-
-
 // /src/components/users/profile-image-upload.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { uploadProfileImage, removeProfileImage } from '@/lib/auth/profile-actions';
@@ -14,6 +12,26 @@ interface ProfileImageUploadProps {
   onImageUpdate: (imageUrl: string) => void;
 }
 
+// Custom hook for image preview
+function useImagePreview() {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const createPreview = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return url;
+  };
+
+  const clearPreview = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+  };
+
+  return { previewUrl, createPreview, clearPreview };
+}
+
 export function ProfileImageUpload({ 
   currentImage, 
   userName, 
@@ -22,6 +40,14 @@ export function ProfileImageUpload({
   const [isLoading, setIsLoading] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { previewUrl, createPreview, clearPreview } = useImagePreview();
+
+  // Clean up preview URL on unmount
+  useEffect(() => {
+    return () => {
+      clearPreview();
+    };
+  }, []);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,6 +69,9 @@ export function ProfileImageUpload({
       return;
     }
 
+    // Create preview immediately
+    createPreview(file);
+
     setIsLoading(true);
 
     try {
@@ -54,15 +83,18 @@ export function ProfileImageUpload({
       if (result.success && result.imageUrl) {
         toast.success('Profile image updated!');
         onImageUpdate(result.imageUrl);
+        clearPreview(); // Clear preview after successful upload
       } else {
         toast.error('Upload failed', {
           description: result.errors?.[0] || result.message,
         });
+        clearPreview(); // Clear preview on failure
       }
     } catch (error) {
       toast.error('Upload failed', {
         description: 'An unexpected error occurred',
       });
+      clearPreview(); // Clear preview on error
     } finally {
       setIsLoading(false);
       // Reset file input
@@ -83,6 +115,7 @@ export function ProfileImageUpload({
       if (result.success) {
         toast.success('Profile image removed');
         onImageUpdate('');
+        clearPreview();
       } else {
         toast.error('Removal failed', {
           description: result.errors?.[0] || result.message,
@@ -106,16 +139,27 @@ export function ProfileImageUpload({
       .slice(0, 2);
   };
 
+  // Determine which image to display
+  const displayImage = previewUrl || currentImage;
+
   return (
     <div className="flex flex-col items-center space-y-4">
       {/* Profile Image Display */}
       <div className="relative">
-        {currentImage ? (
-          <img
-            src={currentImage}
-            alt={`${userName}'s profile`}
-            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-          />
+        {displayImage ? (
+          <>
+            <img
+              src={displayImage}
+              alt={`${userName}'s profile`}
+              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+            />
+            {/* Preview Indicator */}
+            {previewUrl && (
+              <div className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                Preview
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-4 border-white shadow-lg">
             <span className="text-white text-2xl font-bold">
@@ -162,7 +206,7 @@ export function ProfileImageUpload({
           )}
         </Button>
 
-        {currentImage && (
+        {(currentImage || previewUrl) && (
           <Button
             onClick={handleRemoveImage}
             disabled={isLoading || isRemoving}
@@ -172,12 +216,28 @@ export function ProfileImageUpload({
             {isRemoving ? 'Removing...' : 'Remove Photo'}
           </Button>
         )}
+
+        {/* Cancel Preview Button */}
+        {previewUrl && !isLoading && (
+          <Button
+            onClick={clearPreview}
+            variant="outline"
+            className="w-full text-gray-600 border-gray-300 hover:bg-gray-50"
+          >
+            Cancel Preview
+          </Button>
+        )}
       </div>
 
       {/* Help Text */}
-      <p className="text-xs text-gray-500 text-center">
-        Recommended: Square image, 400x400px or larger, max 5MB
-      </p>
+      <div className="text-center space-y-1">
+        <p className="text-xs text-gray-500">
+          Recommended: Square image, 400x400px or larger
+        </p>
+        <p className="text-xs text-gray-400">
+          Max file size: 5MB
+        </p>
+      </div>
     </div>
   );
 }
