@@ -8,6 +8,7 @@ export interface SessionData {
   userId: string;
   email: string;
   name: string;
+  image?: string; // Added profile image property
   roles: string[];
   primaryRole: string;
   expires: number;
@@ -114,6 +115,7 @@ export async function refreshSession(): Promise<boolean> {
     userId: session.userId,
     email: session.email,
     name: session.name,
+    image: session.image, // Include image in session refresh
     roles: session.roles,
     primaryRole: session.primaryRole,
   });
@@ -121,12 +123,9 @@ export async function refreshSession(): Promise<boolean> {
   return true;
 }
 
-
-// /lib/auth/session.ts - FIXED updateUserSession function
-
 /**
- * Update user session with new role information
- * This should be called when user roles change
+ * Update user session with new role and profile information
+ * This should be called when user roles or profile changes
  */
 export async function updateUserSession(userId: string): Promise<boolean> {
   'use server';
@@ -183,12 +182,14 @@ export async function updateUserSession(userId: string): Promise<boolean> {
 
     console.log('📊 Database roles:', userRoles);
     console.log('🎯 Database primary role:', primaryRole);
+    console.log('🖼️ Database profile image:', user.image);
 
-    // Update session with new roles
+    // Update session with new roles and profile data
     const updatedSession: SessionData = {
       userId: sessionData.userId,
       email: sessionData.email,
       name: sessionData.name,
+      image: user.image || sessionData.image, // Preserve existing image or update with new one
       roles: userRoles,
       primaryRole: primaryRole,
       expires: Date.now() + SESSION_DURATION, // Refresh expiration
@@ -196,7 +197,8 @@ export async function updateUserSession(userId: string): Promise<boolean> {
 
     console.log('🔄 Updated session data:', {
       roles: updatedSession.roles,
-      primaryRole: updatedSession.primaryRole
+      primaryRole: updatedSession.primaryRole,
+      image: updatedSession.image
     });
 
     // Save updated session
@@ -208,7 +210,7 @@ export async function updateUserSession(userId: string): Promise<boolean> {
       path: '/',
     });
 
-    console.log('✅ Session updated successfully with new roles');
+    console.log('✅ Session updated successfully with new roles and profile data');
     return true;
   } catch (error) {
     console.error('❌ Error updating user session:', error);
@@ -216,6 +218,104 @@ export async function updateUserSession(userId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Update only the profile image in the session
+ * This is more efficient than updating the entire session
+ */
+export async function updateSessionImage(userId: string, imageUrl: string): Promise<boolean> {
+  'use server';
+  
+  try {
+    const cookieStore = await cookies();
+    const userCookie = cookieStore.get('axioquan-user')?.value;
+
+    if (!userCookie) {
+      console.log('❌ No session cookie found for user:', userId);
+      return false;
+    }
+
+    const sessionData = JSON.parse(userCookie) as SessionData;
+    
+    // Only update if it's the same user
+    if (sessionData.userId !== userId) {
+      console.log('❌ Session user ID mismatch:', sessionData.userId, 'vs', userId);
+      return false;
+    }
+
+    console.log('🔄 Updating session image for user:', userId);
+
+    // Update session with new image
+    const updatedSession: SessionData = {
+      ...sessionData,
+      image: imageUrl,
+      expires: Date.now() + SESSION_DURATION, // Refresh expiration
+    };
+
+    // Save updated session
+    cookieStore.set('axioquan-user', JSON.stringify(updatedSession), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hour in seconds
+      path: '/',
+    });
+
+    console.log('✅ Session image updated successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error updating session image:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove profile image from session
+ */
+export async function removeSessionImage(userId: string): Promise<boolean> {
+  'use server';
+  
+  try {
+    const cookieStore = await cookies();
+    const userCookie = cookieStore.get('axioquan-user')?.value;
+
+    if (!userCookie) {
+      console.log('❌ No session cookie found for user:', userId);
+      return false;
+    }
+
+    const sessionData = JSON.parse(userCookie) as SessionData;
+    
+    // Only update if it's the same user
+    if (sessionData.userId !== userId) {
+      console.log('❌ Session user ID mismatch:', sessionData.userId, 'vs', userId);
+      return false;
+    }
+
+    console.log('🔄 Removing session image for user:', userId);
+
+    // Update session by removing image
+    const updatedSession: SessionData = {
+      ...sessionData,
+      image: undefined, // Remove image from session
+      expires: Date.now() + SESSION_DURATION, // Refresh expiration
+    };
+
+    // Save updated session
+    cookieStore.set('axioquan-user', JSON.stringify(updatedSession), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hour in seconds
+      path: '/',
+    });
+
+    console.log('✅ Session image removed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error removing session image:', error);
+    return false;
+  }
+}
 
 /**
  * Invalidate all sessions for a specific user

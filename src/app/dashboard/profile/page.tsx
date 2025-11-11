@@ -1,11 +1,9 @@
 // /src/app/dashboard/profile/page.tsx
-
 import { withSessionRefresh } from '@/lib/auth/utils';
-import { ProfileForm } from '@/components/users/profile-form';
+import { CompleteProfileForm } from '@/components/users/complete-profile-form';
 import { DeleteAccountForm } from '@/components/users/delete-account-form';
 import { ChangePasswordForm } from '@/components/users/change-password-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 
 export default async function ProfilePage() {
   // Use the existing session refresh utility for protection
@@ -20,25 +18,13 @@ export default async function ProfilePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Profile Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Update your personal information and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ProfileForm />
-            </CardContent>
-          </Card>
+      {/* Replace the existing ProfileForm with CompleteProfileForm */}
+      <CompleteProfileForm />
 
-          {/* Change Password */}
-          <ChangePasswordForm />
-        </div>
+      {/* Keep the existing security sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Column - Change Password */}
+        <ChangePasswordForm />
 
         {/* Right Column - Danger Zone */}
         <div className="space-y-6">
@@ -61,9 +47,9 @@ export default async function ProfilePage() {
                       Manage your active sessions
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
                     Manage Sessions
-                  </Button>
+                  </button>
                 </div>
               </div>
             </CardContent>
@@ -73,4 +59,3 @@ export default async function ProfilePage() {
     </div>
   );
 }
-
