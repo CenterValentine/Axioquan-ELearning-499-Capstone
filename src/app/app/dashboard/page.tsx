@@ -27,11 +27,7 @@
 //             <p className="text-2xl font-bold text-blue-600 capitalize">
 //               {session.primaryRole}
 //             </p>
-//             {session.primaryRole !== 'student' && (
-//               <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-//                 Upgraded
-//               </span>
-//             )}
+//            
 //           </div>
 //         </div>
         
@@ -50,7 +46,7 @@
 //         <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
 //         <div className="space-y-3">
 //           <a 
-//             href="/dashboard/courses" 
+//             href="app/courses" 
 //             className="block w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
 //           >
 //             <div className="font-medium text-gray-900">Browse Courses</div>
@@ -160,11 +156,7 @@ export default async function DashboardPage() {
             <p className="text-2xl font-bold text-blue-600 capitalize">
               {session.primaryRole}
             </p>
-            {session.primaryRole !== 'student' && (
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                Upgraded
-              </span>
-            )}
+           
           </div>
         </div>
         
@@ -183,7 +175,7 @@ export default async function DashboardPage() {
         <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
         <div className="space-y-3">
           <a 
-            href="/dashboard/courses" 
+            href="app/courses" 
             className="block w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <div className="font-medium text-gray-900">Browse Courses</div>
@@ -192,7 +184,7 @@ export default async function DashboardPage() {
           
           {session.roles.includes('instructor') && (
             <a 
-              href="/dashboard/instructor" 
+              href="app/instructor" 
               className="block w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="font-medium text-gray-900">Instructor Dashboard</div>
@@ -201,7 +193,7 @@ export default async function DashboardPage() {
           )}
           
           <a 
-            href="/dashboard/profile" 
+            href="app/dashboard/profile" 
             className="block w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <div className="font-medium text-gray-900">Update Profile</div>
@@ -210,7 +202,7 @@ export default async function DashboardPage() {
 
           {session.primaryRole === 'student' && (
             <a 
-              href="/dashboard/request-upgrade" 
+              href="app/request-upgrade" 
               className="block w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <div className="font-medium text-gray-900">Request Role Upgrade</div>

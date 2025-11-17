@@ -8,6 +8,10 @@ import { RoleRefreshHandler } from '@/components/auth/role-refresh-handler';
 import { UserProfileNav } from '@/components/dashboard/user-profile-nav';
 import { sql } from '@/lib/db';
 
+// https://lucide.dev/icons/
+import { BookOpen, Icon, LayoutDashboard, Library, LibraryBig, MessageCircle, SquareUserRound } from 'lucide-react';
+
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -49,7 +53,13 @@ export default async function DashboardLayout({
           {/* Sidebar */}
           <aside className="w-64 bg-white shadow-sm min-h-screen border-r">
             <div className="p-6 border-b">
-              <h1 className="text-xl font-bold text-gray-900">AxioQuan</h1>
+              <h1 className="text-xl font-bold text-gray-900">AxioQuan {session.primaryRole !== 'student' && (
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                Pro
+              </span>
+            )}</h1>
+              
+               
               <p className="text-sm text-gray-600">Dashboard</p>
               
               {/* Updated: Use UserProfileNav component with latest image from database */}
@@ -68,56 +78,29 @@ export default async function DashboardLayout({
             <nav className="p-4 space-y-2">
               {/* Main Navigation */}
               <a 
-                href="/dashboard" 
-                className="block py-2 px-4 text-blue-600 bg-blue-50 rounded-lg transition-colors"
+                href="/app/dashboard" 
+                className="flex gap-2 block py-2 px-4
+                  {
+                // if page is active text-blue-600 bg-blue-50
+                }
+                rounded-lg transition-colors"
               >
-                Overview
-              </a>
-              <a 
-                href="/dashboard/profile" 
-                className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                Profile
-              </a>
-              <a 
-                href="/dashboard/courses" 
-                className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                Courses
+                <LayoutDashboard/>
+                <> </>Dashboard
               </a>
 
-              {/* Admin Panel Link - Only for Admin Users */}
-              {userRoles.includes('admin') && (
-                <a 
-                  href="/dashboard/admin" 
-                  className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  Admin Panel
-                </a>
-              )}
-
-              {/* Role Upgrade Link - Only for Students */}
-              {userRole === 'student' && (
-                <a 
-                  href="/dashboard/request-upgrade" 
-                  className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  Request Upgrade
-                </a>
-              )}
-
-              {/* Instructor-specific links */}
+ {/* Instructor-specific links */}
               {userRole === 'instructor' && (
                 <>
                   <a 
-                    href="/dashboard/instructor/courses" 
-                    className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    href="app/instructor" 
+                    className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     My Courses
                   </a>
                   <a 
-                    href="/dashboard/instructor/create" 
-                    className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    href="app/instructor/create" 
+                    className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                   >
                     Create Course
                   </a>
@@ -127,12 +110,49 @@ export default async function DashboardLayout({
               {/* Teaching Assistant-specific links */}
               {userRole === 'teaching_assistant' && (
                 <a 
-                  href="/dashboard/assistant" 
-                  className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  href="/app/instructor" 
+                  className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                 >
-                  Assistant Dashboard
+                 <SquareUserRound/> Instructor
                 </a>
               )}
+
+ <a 
+                href="courses" 
+                className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <Library></Library>Course Library
+              </a>
+
+               <a 
+                href="/app/communications/inbox" 
+                    className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+<span><MessageCircle/></span>
+                Communication
+              </a>
+
+              {/* Admin Panel Link - Only for Admin Users */}
+              {userRoles.includes('admin') && (
+                <a 
+                  href="/app/admin" 
+                  className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Admin Panel
+                </a>
+              )}
+
+              {/* Role Upgrade Link - Only for Students */}
+              {userRole === 'student' && (
+                <a 
+                  href="/app/request-upgrade" 
+                  className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Request Upgrade
+                </a>
+              )}
+
+             
 
               {/* Logout Button - Keep the sidebar logout for accessibility */}
               <div className="pt-4 border-t border-gray-200">

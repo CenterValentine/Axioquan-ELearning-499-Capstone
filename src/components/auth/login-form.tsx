@@ -46,7 +46,7 @@ export default function LoginForm() {
         });
         
         // Redirect to dashboard - session is stored in HTTP-only cookie
-        router.push('/dashboard');
+        router.push('app/dashboard');
         router.refresh();
       } else {
         console.error('❌ Login failed:', result.message);
