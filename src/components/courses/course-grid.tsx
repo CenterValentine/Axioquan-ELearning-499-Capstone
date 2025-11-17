@@ -80,12 +80,12 @@
 
 
 
-
 // /src/components/courses/course-grid.tsx
 
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -272,10 +272,12 @@ function CourseCard({
           </div>
         )}
 
-        {/* Course Title */}
-        <h3 className="font-bold text-lg text-gray-900 mb-3 line-clamp-2 leading-tight group-hover:text-gray-800 transition-colors">
-          {course.title}
-        </h3>
+        {/* Course Title with Link */}
+        <Link href={course.is_published ? `/courses/${course.slug}` : '#'}>
+          <h3 className="font-bold text-lg text-gray-900 mb-3 line-clamp-2 leading-tight group-hover:text-gray-800 transition-colors hover:text-blue-600 cursor-pointer">
+            {course.title}
+          </h3>
+        </Link>
 
         {/* Course Description */}
         <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
@@ -403,9 +405,11 @@ function CourseCard({
               </Button>
             </div>
           ) : (
-            <Button className="rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 border-0 px-6 font-semibold">
-              {course.is_published ? 'Enroll Now' : 'Preview'}
-            </Button>
+            <Link href={course.is_published ? `/courses/${course.slug}` : '#'}>
+              <Button className="rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 border-0 px-6 font-semibold">
+                {course.is_published ? 'View Course' : 'Preview'}
+              </Button>
+            </Link>
           )}
         </div>
 
