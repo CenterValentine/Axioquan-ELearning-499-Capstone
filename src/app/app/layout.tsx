@@ -5,14 +5,16 @@ import { getSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { RealTimeProvider } from '@/components/providers/realtime-provider';
 import { RoleRefreshHandler } from '@/components/auth/role-refresh-handler';
+import { SidebarNav } from '@/components/app/nav/Sidebar'
 import { UserProfileNav } from '@/components/dashboard/user-profile-nav';
 import { sql } from '@/lib/db';
+
 
 // https://lucide.dev/icons/
 import { BookOpen, Icon, LayoutDashboard, Library, LibraryBig, MessageCircle, SquareUserRound } from 'lucide-react';
 
 
-export default async function DashboardLayout({
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -26,6 +28,7 @@ export default async function DashboardLayout({
   // ✅ DIRECT DATABASE FETCH: Get the latest user data including profile image
   let userImage = session.image; // Fallback to session image
   let userName = session.name;
+  
   
   try {
     const userData = await sql`
@@ -44,7 +47,7 @@ export default async function DashboardLayout({
 
   // Use primaryRole for role-based navigation
   const userRole = session.primaryRole;
-  const userRoles = session.roles;
+  const userRoles = session.roles ?? [];
 
   return (
     <RealTimeProvider>
@@ -75,90 +78,9 @@ export default async function DashboardLayout({
                 Live Updates Active
               </div>
             </div>
-            <nav className="p-4 space-y-2">
-              {/* Main Navigation */}
-              <a 
-                href="/app/dashboard" 
-                className="flex gap-2 block py-2 px-4
-                  {
-                // if page is active text-blue-600 bg-blue-50
-                }
-                rounded-lg transition-colors"
-              >
-                <LayoutDashboard/>
-                <> </>Dashboard
-              </a>
+            {/* Main Navigation */}
+<SidebarNav userRole={userRole} userRoles={userRoles} />
 
- {/* Instructor-specific links */}
-              {userRole === 'instructor' && (
-                <>
-                  <a 
-                    href="app/instructor" 
-                    className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    My Courses
-                  </a>
-                  <a 
-                    href="app/instructor/create" 
-                    className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    Create Course
-                  </a>
-                </>
-              )}
-
-              {/* Teaching Assistant-specific links */}
-              {userRole === 'teaching_assistant' && (
-                <a 
-                  href="/app/instructor" 
-                  className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                 <SquareUserRound/> Instructor
-                </a>
-              )}
-
- <a 
-                href="courses" 
-                className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <Library></Library>Course Library
-              </a>
-
-               <a 
-                href="/app/communications/inbox" 
-                    className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-<span><MessageCircle/></span>
-                Communication
-              </a>
-
-              {/* Admin Panel Link - Only for Admin Users */}
-              {userRoles.includes('admin') && (
-                <a 
-                  href="/app/admin" 
-                  className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  Admin Panel
-                </a>
-              )}
-
-              {/* Role Upgrade Link - Only for Students */}
-              {userRole === 'student' && (
-                <a 
-                  href="/app/request-upgrade" 
-                  className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  Request Upgrade
-                </a>
-              )}
-
-             
-
-              {/* Logout Button - Keep the sidebar logout for accessibility */}
-              <div className="pt-4 border-t border-gray-200">
-                <LogoutButton />
-              </div>
-            </nav>
           </aside>
 
           {/* Main Content */}
