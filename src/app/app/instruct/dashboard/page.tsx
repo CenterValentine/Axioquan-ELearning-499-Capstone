@@ -4,6 +4,8 @@
 
 import { withSessionRefresh } from '@/lib/auth/utils';
 import { checkAuthStatus } from '@/lib/auth/actions';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter} from '@/components/ui/card';  
+
 
 export default async function DashboardPage() {
   // Use withSessionRefresh to automatically refresh session if needed
@@ -24,26 +26,50 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="font-semibold text-gray-900 mb-2">Your Role</h3>
-          <div className="flex items-center space-x-2">
-            <p className="text-2xl font-bold text-blue-600 capitalize">
-              {session.primaryRole}
-            </p>
-           
-          </div>
-        </div>
+
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+<Card>
+  <CardHeader>
+    <CardTitle>Active Courses</CardTitle>
+    <CardContent className=" p-0 text-green-600 capitalize">
+2
+    </CardContent>
+  </CardHeader>
+</Card>
+
+
+<Card>
+  <CardHeader>
+    <CardTitle>Total Students</CardTitle>
+    <CardContent className=" p-0 text-purple-600 capitalize">
+38
+    </CardContent>
+  </CardHeader>
+</Card>
+
+
+
+<Card>
+  <CardHeader>
+    <CardTitle>Avg. Rating</CardTitle>
+    <CardContent className=" p-0 text-blue-600 capitalize">
+3.7
+    </CardContent>
+  </CardHeader>
+</Card>
+
+
+<Card>
+  <CardHeader>
+    <CardTitle>Course Revenue</CardTitle>
+    <CardContent className=" p-0 text-green-600 capitalize">
+$12,450
+    </CardContent>
+  </CardHeader>
+</Card>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="font-semibold text-gray-900 mb-2">Enrolled Courses</h3>
-          <p className="text-2xl font-bold text-green-600">0</p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="font-semibold text-gray-900 mb-2">Learning Progress</h3>
-          <p className="text-2xl font-bold text-purple-600">0%</p>
-        </div>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm border">
