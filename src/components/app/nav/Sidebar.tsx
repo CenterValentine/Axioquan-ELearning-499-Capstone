@@ -83,7 +83,7 @@ isInstructSection={isInstructSection}
 
 
  <a 
-                href="/app/courses/search" 
+                href="/app/courses/explore" 
                 className="flex gap-2 block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <Library></Library>Course Library

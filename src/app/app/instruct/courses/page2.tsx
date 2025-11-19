@@ -76,7 +76,6 @@ const getThumbnailGradient = (color: string) => {
                     <h3 className="text-slate-900 mb-2 line-clamp-2">{course.title}</h3>
                 <p className="text-slate-600 mb-3 line-clamp-2">{course.description}</p>
 
-
    <div className="space-y-2">
                   <div className="flex items-center justify-between text-slate-600">
                     <div className="flex items-center gap-1">

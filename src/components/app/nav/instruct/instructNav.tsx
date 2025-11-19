@@ -25,7 +25,7 @@ export function InstructNav ({isInstructSection, linkBase, active}: InstructProp
              <LayoutDashboard></LayoutDashboard>Dashboard
           </a>
           <a
-            href="/app/instruct/curriculums"
+            href="/app/instruct/courses"
            className={`${linkBase} ${
                 pathname.startsWith('/app/learn/my-courses') ? active : ''
               }`}
