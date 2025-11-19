@@ -16,6 +16,11 @@ export interface UploadResult {
   imageUrl?: string;
   publicId?: string;
   error?: string;
+
+  // ✅ New fields you need
+  bytes?: number;        // file size in bytes
+  duration?: number;     // video duration in seconds (Cloudinary)
+
 }
 
 /**

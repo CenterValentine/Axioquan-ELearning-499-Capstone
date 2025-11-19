@@ -80,7 +80,7 @@ export default async function DashboardLayout({
                 Profile
               </a>
               <a 
-                href="/dashboard/courses" 
+                href="/courses" 
                 className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 Courses
@@ -88,12 +88,36 @@ export default async function DashboardLayout({
 
               {/* Admin Panel Link - Only for Admin Users */}
               {userRoles.includes('admin') && (
-                <a 
-                  href="/dashboard/admin" 
-                  className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  Admin Panel
-                </a>
+                <div className="space-y-1">
+                  <a 
+                    href="/dashboard/admin" 
+                    className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                  >
+                    Admin Panel
+                  </a>
+                  
+                  {/* Admin Sub-menu */}
+                  <div className="ml-4 space-y-1 border-l-2 border-gray-100 pl-2">
+                    <a 
+                      href="/dashboard/admin/categories" 
+                      className="block py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Categories
+                    </a>
+                    <a 
+                      href="/dashboard/admin/tags" 
+                      className="block py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Tags
+                    </a>
+                    <a 
+                      href="/dashboard/admin/cleanup" 
+                      className="block py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Role Cleanup
+                    </a>
+                  </div>
+                </div>
               )}
 
               {/* Role Upgrade Link - Only for Students */}
@@ -106,8 +130,9 @@ export default async function DashboardLayout({
                 </a>
               )}
 
+
               {/* Instructor-specific links */}
-              {userRole === 'instructor' && (
+              {(userRole === 'instructor' || userRoles.includes('instructor')) && (
                 <>
                   <a 
                     href="/dashboard/instructor/courses" 
@@ -123,6 +148,25 @@ export default async function DashboardLayout({
                   </a>
                 </>
               )}
+
+              
+              {/* Instructor-specific links */}
+              {/* {userRole === 'instructor' && (
+                <>
+                  <a 
+                    href="/dashboard/instructor/courses" 
+                    className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    My Courses
+                  </a>
+                  <a 
+                    href="/dashboard/instructor/create" 
+                    className="block py-2 px-4 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    Create Course
+                  </a>
+                </>
+              )} */}
 
               {/* Teaching Assistant-specific links */}
               {userRole === 'teaching_assistant' && (

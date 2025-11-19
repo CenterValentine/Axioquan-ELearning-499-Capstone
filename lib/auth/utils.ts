@@ -47,20 +47,58 @@ export async function refreshSessionAction() {
   return await refreshSession();
 }
 
+
+
+/**
+ * Require specific role(s) - check if user has at least one of the required roles
+ */
+export async function requireRole(requiredRoles: string | string[]): Promise<any> {
+  const session = await getSession();
+  
+  if (!session) {
+    throw new Error('Unauthorized: Please log in');
+  }
+
+  // Convert single role to array for consistent handling
+  const rolesArray = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
+  
+  // Check if user has at least one of the required roles
+  const hasRequiredRole = rolesArray.some(role => 
+    session.roles?.includes(role)
+  );
+
+  if (!hasRequiredRole) {
+    throw new Error(`Unauthorized: Requires one of these roles: ${rolesArray.join(', ')}`);
+  }
+
+  return session;
+}
+
+/**
+ * Require specific role(s) with session refresh
+ */
+export async function requireRoleWithRefresh(requiredRoles: string | string[]): Promise<any> {
+  const session = await withSessionRefresh();
+  return requireRole(requiredRoles);
+}
+
 /**
  * Check if user has specific role
  */
-export async function requireRole(role: string) {
-  'use server';
+// export async function requireRole(role: string) {
+//   'use server';
   
-  const session = await requireAuth();
+//   const session = await requireAuth();
   
-  if (!session.roles.includes(role)) {
-    redirect('/dashboard?error=unauthorized');
-  }
+//   if (!session.roles.includes(role)) {
+//     redirect('/dashboard?error=unauthorized');
+//   }
   
-  return session;
-}
+//   return session;
+// }
+
+
+
 
 /**
  * Check if user has any of the specified roles
