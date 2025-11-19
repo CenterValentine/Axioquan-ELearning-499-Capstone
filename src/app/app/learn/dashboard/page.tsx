@@ -5,7 +5,7 @@
 import { withSessionRefresh } from '@/lib/auth/utils';
 import { checkAuthStatus } from '@/lib/auth/actions';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter} from '@/components/ui/card';  
-import {User, BookOpen} from 'lucide-react';
+
 
 export default async function DashboardPage() {
   // Use withSessionRefresh to automatically refresh session if needed

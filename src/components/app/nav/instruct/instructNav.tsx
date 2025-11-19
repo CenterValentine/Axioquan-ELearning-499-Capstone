@@ -2,7 +2,7 @@
 `use client`;
 
 import { usePathname } from 'next/navigation';
-import { EyeIcon, LayoutDashboard } from 'lucide-react';
+import { EyeIcon, LayoutDashboard, Folder, Plus,  LayoutList } from 'lucide-react';
 
 
 type InstructProps = {
@@ -30,7 +30,7 @@ export function InstructNav ({isInstructSection, linkBase, active}: InstructProp
                 pathname.startsWith('/app/learn/my-courses') ? active : ''
               }`}
           >
-            My Courses
+            <LayoutList> </LayoutList>Instructor Courses
           </a>
           <a
             href="/app/instruct/create"
@@ -38,17 +38,17 @@ export function InstructNav ({isInstructSection, linkBase, active}: InstructProp
                 pathname.startsWith('/app/learn/my-courses') ? active : ''
               }`}
           >
-            Create Course
+            <Plus></Plus>Create Course
           </a>
 
-             <a
+             {/* <a
             href="/app/instruct/view"
             className={`${linkBase} ${
                 pathname.startsWith('/app/learn/my-courses') ? active : ''
               }`}
           >
           <EyeIcon></EyeIcon> View Course
-          </a>
+          </a> */}
           </div>
     </>)
 }
