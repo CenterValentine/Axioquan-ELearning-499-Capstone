@@ -1,4 +1,3 @@
-
 // /src/components/admin/cleanup-form.tsx
 
 'use client';
@@ -51,7 +50,7 @@ export function CleanupForm() {
           onClick={handleCleanupAll}
           disabled={cleaning}
           variant="destructive"
-          className="w-full"
+          className="w-full bg-red-600 hover:bg-red-700 text-white" // ✅ FIX: Added text-white
         >
           {cleaning ? 'Cleaning Up...' : 'Cleanup All Dual Roles'}
         </Button>
