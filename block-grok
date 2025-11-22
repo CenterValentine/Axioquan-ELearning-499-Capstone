@@ -1,0 +1,2 @@
+block drop quick on en0 from any to grok.com
+block drop quick on en0 from any to www.grok.com

@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth/session';
-import { LogoutButton } from '@/components/auth/logout-button';
 import { RealTimeProvider } from '@/components/providers/realtime-provider';
 import { RoleRefreshHandler } from '@/components/auth/role-refresh-handler';
 import { SidebarNav } from '@/components/app/nav/Sidebar'
