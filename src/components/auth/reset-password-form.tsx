@@ -1,4 +1,4 @@
-// /src/components/auth/reset-password-form.tsx
+// // /src/components/auth/reset-password-form.tsx
 
 'use client';
 
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { validateResetToken, resetPasswordWithToken } from '@/lib/auth/actions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 
 const resetPasswordSchema = z.object({
   newPassword: z.string().min(8, 'Password must be at least 8 characters'),
@@ -27,6 +28,8 @@ interface ResetPasswordFormProps {
 export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(!!token);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [tokenStatus, setTokenStatus] = useState<{
     isValid: boolean;
     message: string;
@@ -65,56 +68,53 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     }
   };
 
+  const onSubmit = async (data: ResetPasswordFormData) => {
+    if (!token || !tokenStatus?.isValid) return;
 
-// /src/components/auth/reset-password-form.tsx - Update onSubmit
+    setIsLoading(true);
+    try {
+      // Use undefined instead of null for optional fields
+      const result = await resetPasswordWithToken({
+        token,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+        ipAddress: undefined, // Use undefined instead of null
+        userAgent: navigator.userAgent,
+      });
 
-const onSubmit = async (data: ResetPasswordFormData) => {
-  if (!token || !tokenStatus?.isValid) return;
-
-  setIsLoading(true);
-  try {
-    // Use undefined instead of null for optional fields
-    const result = await resetPasswordWithToken({
-      token,
-      newPassword: data.newPassword,
-      confirmPassword: data.confirmPassword,
-      ipAddress: undefined, // Use undefined instead of null
-      userAgent: navigator.userAgent,
-    });
-
-    if (result.success) {
-      // Show success message and redirect
+      if (result.success) {
+        // Show success message and redirect
+        setTokenStatus(prev => prev ? {
+          ...prev,
+          message: result.message,
+          isValid: true,
+        } : null);
+        
+        // Reset form
+        reset();
+        
+        // Redirect to login page after successful reset
+        setTimeout(() => {
+          router.push('/login?message=password-reset-success');
+        }, 3000);
+      } else {
+        // Show error message
+        setTokenStatus(prev => prev ? {
+          ...prev,
+          message: result.message,
+          isValid: false,
+        } : null);
+      }
+    } catch (error) {
       setTokenStatus(prev => prev ? {
         ...prev,
-        message: result.message,
-        isValid: true,
-      } : null);
-      
-      // Reset form
-      reset();
-      
-      // Redirect to login page after successful reset
-      setTimeout(() => {
-        router.push('/login?message=password-reset-success');
-      }, 3000);
-    } else {
-      // Show error message
-      setTokenStatus(prev => prev ? {
-        ...prev,
-        message: result.message,
+        message: 'An unexpected error occurred',
         isValid: false,
       } : null);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    setTokenStatus(prev => prev ? {
-      ...prev,
-      message: 'An unexpected error occurred',
-      isValid: false,
-    } : null);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // No token provided
   if (!token) {
@@ -197,14 +197,24 @@ const onSubmit = async (data: ResetPasswordFormData) => {
         <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
           New Password
         </label>
-        <input
-          id="newPassword"
-          type="password"
-          placeholder="Enter your new password"
-          {...register('newPassword')}
-          disabled={isLoading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-        />
+        <div className="relative">
+          <input
+            id="newPassword"
+            type={showNewPassword ? "text" : "password"}
+            placeholder="Enter your new password"
+            {...register('newPassword')}
+            disabled={isLoading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowNewPassword(!showNewPassword)}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            disabled={isLoading}
+          >
+            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         {errors.newPassword && (
           <p className="text-sm text-red-600">{errors.newPassword.message}</p>
         )}
@@ -217,14 +227,24 @@ const onSubmit = async (data: ResetPasswordFormData) => {
         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
           Confirm New Password
         </label>
-        <input
-          id="confirmPassword"
-          type="password"
-          placeholder="Confirm your new password"
-          {...register('confirmPassword')}
-          disabled={isLoading}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-        />
+        <div className="relative">
+          <input
+            id="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="Confirm your new password"
+            {...register('confirmPassword')}
+            disabled={isLoading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            disabled={isLoading}
+          >
+            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         {errors.confirmPassword && (
           <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
         )}

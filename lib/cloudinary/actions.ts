@@ -1,5 +1,6 @@
 
-// /lib/cloudinary/actions.ts
+// // /lib/cloudinary/actions.ts
+
 'use server';
 
 import { v2 as cloudinary } from 'cloudinary';
@@ -13,39 +14,61 @@ cloudinary.config({
 });
 
 /**
- * Upload image to Cloudinary - Server Action
+ * Generic upload to Cloudinary - Server Action
+ * - resourceType: 'image' | 'video' | 'raw'
+ * - folder: Cloudinary folder
+ *
+ * Returns UploadResult which now may include duration (seconds) and bytes.
  */
 export async function uploadImage(
   fileBuffer: Buffer,
   fileName: string,
-  folder: string = 'axioquan/profiles'
+  folder: string = 'axioquan/profiles',
+  resourceType: 'image' | 'video' | 'raw' = 'image'
 ): Promise<UploadResult> {
   try {
     return new Promise((resolve) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
-          resource_type: 'image',
-          transformation: [
-            { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-            { quality: 'auto' },
-            { format: 'webp' }
-          ]
+          resource_type: resourceType,
+          use_filename: true,
+          unique_filename: true,
+          chunk_size: 20_000_000,
+          transformation:
+            resourceType === 'image'
+              ? [
+                  { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+                  { quality: 'auto' },
+                  { format: 'webp' },
+                ]
+              : undefined,
         },
-        (error, result) => {
+        (error, result: any) => {
           if (error) {
             console.error('❌ Cloudinary upload error:', error);
             resolve({
               success: false,
-              error: error.message
+              error: error.message,
             });
-          } else if (result) {
-            resolve({
-              success: true,
-              imageUrl: result.secure_url,
-              publicId: result.public_id
-            });
+            return;
           }
+
+          if (!result) {
+            resolve({ success: false, error: 'No result from Cloudinary' });
+            return;
+          }
+
+          // result may contain duration (for videos) and bytes
+          const out: UploadResult = {
+            success: true,
+            imageUrl: result.secure_url,
+            publicId: result.public_id,
+            bytes: result.bytes,
+            duration: result.duration, // seconds (may be undefined for non-video)
+          };
+
+          resolve(out);
         }
       );
 
@@ -55,7 +78,7 @@ export async function uploadImage(
     console.error('❌ Error uploading to Cloudinary:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -65,21 +88,21 @@ export async function uploadImage(
  */
 export async function deleteImage(publicId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const result = await cloudinary.uploader.destroy(publicId);
-    
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+
     if (result.result === 'ok') {
       return { success: true };
     } else {
-      return { 
-        success: false, 
-        error: result.result 
+      return {
+        success: false,
+        error: result.result,
       };
     }
   } catch (error: any) {
     console.error('❌ Error deleting from Cloudinary:', error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
