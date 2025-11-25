@@ -8,6 +8,8 @@ import { RealTimeProvider } from '@/components/providers/realtime-provider';
 import { RoleRefreshHandler } from '@/components/auth/role-refresh-handler';
 import Sidebar from '@/components/dashboard/sidebar';
 import { sql } from '@/lib/db';
+import { NotificationProvider } from "@/components/ui/notification";
+
 
 export default async function DashboardLayout({
   children,
@@ -52,21 +54,21 @@ export default async function DashboardLayout({
   };
 
   return (
-    <RealTimeProvider>
-      <div className="min-h-screen bg-gray-50 flex">
-        {/* Updated Sidebar Component - Now completely fixed */}
-        <Sidebar user={userData} />
-        
-        {/* Main Content - FIXED: This is the only part that scrolls with proper margin */}
-        <main className={`flex-1 min-h-screen overflow-auto transition-all duration-300 ${
-          userData.primaryRole ? 'lg:ml-64' : 'lg:ml-0'
-        }`}>
-          <div className="pt-5 lg:pt-8 px-4 lg:px-8 pb-8">
-            <RoleRefreshHandler />
-            {children}
-          </div>
-        </main>
-      </div>
-    </RealTimeProvider>
+     <NotificationProvider>
+      <RealTimeProvider>
+        <div className="min-h-screen bg-gray-50 flex">
+          <Sidebar user={userData} />
+
+          <main className={`flex-1 min-h-screen overflow-auto transition-all duration-300 ${
+            userData.primaryRole ? 'lg:ml-64' : 'lg:ml-0'
+          }`}>
+            <div className="pt-5 lg:pt-8 px-4 lg:px-8 pb-8">
+              <RoleRefreshHandler />
+              {children}
+            </div>
+          </main>
+        </div>
+      </RealTimeProvider>
+    </NotificationProvider>
   );
 }
