@@ -1,3 +1,5 @@
+// /components/courses/course-learning.tsx
+
 'use client'
 
 import { useState } from "react"

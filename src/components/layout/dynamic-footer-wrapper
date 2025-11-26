@@ -1,0 +1,23 @@
+
+// // components/layout/dynamic-footer-wrapper
+
+// "use client";
+
+// import { usePathname } from "next/navigation";
+// import { Footer } from "./footer";
+// import { noFooterRoutes } from "@/lib/no-footer-routes";
+
+// export default function DynamicFooterWrapper({ children }: { children: React.ReactNode }) {
+//   const pathname = usePathname();
+//   const hideFooter = noFooterRoutes.some((route) => pathname.startsWith(route));
+
+//   return (
+//     <div className="min-h-screen flex flex-col">
+//       <main className="flex-1">
+//         {children}
+//       </main>
+
+//       {!hideFooter && <Footer />}
+//     </div>
+//   );
+// }

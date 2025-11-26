@@ -1,3 +1,4 @@
+
 // /src/components/courses/course-editor.tsx
 
 'use client';
