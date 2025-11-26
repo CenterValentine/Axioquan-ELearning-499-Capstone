@@ -51,10 +51,11 @@ interface CourseData {
 }
 
 interface CourseLearningProps {
-  courseId: string
+  courseId: string;
+  modules: Module[]; // from curriculum.ts - Module interface
 }
 
-export default function CourseLearningPage({ courseId }: CourseLearningProps) {
+export default function CourseLearningPage({ courseId, modules }: CourseLearningProps) {
   const [currentModule, setCurrentModule] = useState(0)
   const [currentLesson, setCurrentLesson] = useState(0)
   const [expandedModules, setExpandedModules] = useState<number[]>([0])

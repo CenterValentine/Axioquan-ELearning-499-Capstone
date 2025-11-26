@@ -2,7 +2,7 @@
 // /app/dashboard/instructor/analytics/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import Sidebar from '@/components/dashboard/sidebar'
+import AppShellSidebar from '@/components/shell/AppSidebarNav'
 
 export default async function InstructorAnalytics() {
   const session = await getSession()
@@ -28,7 +28,7 @@ export default async function InstructorAnalytics() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar user={user} />
+      <AppShellSidebar user={user} />
       <main className="flex-1 overflow-auto p-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Instructor Analytics</h1>

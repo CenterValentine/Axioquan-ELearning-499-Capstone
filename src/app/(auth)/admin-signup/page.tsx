@@ -3,8 +3,8 @@
 // // /src/app/(auth)/admin-signup/page.tsx
 
 import { AdminSignUpForm } from '@/components/auth/admin-signup-form';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/shell/header';
+import { Footer } from '@/components/shell/footer';
 import Link from 'next/link';
 
 export default function AdminSignUpPage() {

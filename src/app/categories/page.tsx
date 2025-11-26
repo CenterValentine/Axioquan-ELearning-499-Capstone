@@ -12,8 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Home, BookOpen, ArrowRight, Star, Users, TrendingUp, Sparkles, Zap, Loader2, Grid3X3, List } from 'lucide-react';
 import { Category } from '@/types/categories';
 import { CategoryCard } from '@/components/categories/category-card';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/shell/header';
+import { Footer } from '@/components/shell/footer';
 
 // Fixed View Toggle Component
 function ViewToggle({ view, onViewChange }: { view: 'grid' | 'list'; onViewChange: (view: 'grid' | 'list') => void }) {

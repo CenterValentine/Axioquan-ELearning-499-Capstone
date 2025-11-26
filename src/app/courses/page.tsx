@@ -1,3 +1,4 @@
+// main courses page for public
 
 // /app/courses/page.tsx
 
@@ -35,8 +36,8 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Course } from '@/types/courses';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/shell/header';
+import { Footer } from '@/components/shell/footer';
 
 interface CoursesPageProps {
   searchParams: Promise<{
