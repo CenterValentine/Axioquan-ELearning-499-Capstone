@@ -1,48 +1,11 @@
 
 // // /src/app/layout.tsx
 
-
-// import { Toaster } from '@/components/ui/sonner';
-// import './globals.css';
-
-// export default function RootLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   return (
-//     <html lang="en">
-//       <body className="min-h-screen bg-background">
-//         {children}
-//         <Toaster position="top-right" />
-//       </body>
-//     </html>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // /src/app/layout.tsx
-
 // import { Toaster } from '@/components/ui/sonner';
 // import './globals.css';
 // import type { Metadata } from 'next';
+
+// const baseUrl = 'https://axioquan-two.vercel.app';
 
 // export const metadata: Metadata = {
 //   title: {
@@ -63,23 +26,23 @@
 //   // Icons configuration
 //   icons: {
 //     icon: [
-//       { url: "/favicon.ico" },
-//       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-//       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+//       { url: `${baseUrl}/favicon.ico` },
+//       { url: `${baseUrl}/favicon-16x16.png`, sizes: "16x16", type: "image/png" },
+//       { url: `${baseUrl}/favicon-32x32.png`, sizes: "32x32", type: "image/png" },
 //     ],
 //     apple: [
-//       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+//       { url: `${baseUrl}/apple-touch-icon.png`, sizes: "180x180", type: "image/png" },
 //     ],
 //     other: [
 //       {
 //         rel: "android-chrome-192x192",
-//         url: "/android-chrome-192x192.png",
+//         url: `${baseUrl}/android-chrome-192x192.png`,
 //         sizes: "192x192",
 //         type: "image/png",
 //       },
 //       {
 //         rel: "android-chrome-512x512",
-//         url: "/android-chrome-512x512.png",
+//         url: `${baseUrl}/android-chrome-512x512.png`,
 //         sizes: "512x512",
 //         type: "image/png",
 //       },
@@ -92,10 +55,10 @@
 //     siteName: "AxioQuan",
 //     title: "AxioQuan - Learn, Grow, Succeed",
 //     description: "AxioQuan is a comprehensive learning platform offering expert-led courses, interactive curriculum, and career advancement opportunities.",
-//     url: "https://axioquan-git-ui-alexander-cyrils-projects.vercel.app/",
+//     url: baseUrl,
 //     images: [
 //       {
-//         url: "https://axioquan-git-ui-alexander-cyrils-projects.vercel.app/images/AxioQuan.jpg",
+//         url: `${baseUrl}/images/AxioQuan.jpg`,
 //         width: 1200,
 //         height: 630,
 //         alt: "AxioQuan - Comprehensive Learning Platform",
@@ -110,17 +73,17 @@
 //     title: "AxioQuan - Learn, Grow, Succeed",
 //     description: "AxioQuan is a comprehensive learning platform offering expert-led courses, interactive curriculum, and career advancement opportunities.",
 //     creator: "@axioquan",
-//     images: ["https://axioquan-git-ui-alexander-cyrils-projects.vercel.app/images/AxioQuan.jpg"],
+//     images: [`${baseUrl}/images/AxioQuan.jpg`],
 //   },
 
 //   // Additional metadata
-//   metadataBase: new URL("https://axioquan-git-ui-alexander-cyrils-projects.vercel.app"),
+//   metadataBase: new URL(baseUrl),
 //   alternates: {
 //     canonical: "/",
 //   },
   
 //   // App-like behavior for mobile
-//   manifest: "/site.webmanifest",
+//   manifest: `${baseUrl}/site.webmanifest`,
 //   themeColor: "#4f46e5",
 //   appleWebApp: {
 //     capable: true,
@@ -152,12 +115,27 @@
 //         <meta name="msapplication-tap-highlight" content="no" />
 //         <meta name="theme-color" content="#4f46e5" />
         
+//         {/* Explicit OpenGraph tags for better compatibility */}
+//         <meta property="og:title" content="AxioQuan - Learn, Grow, Succeed" />
+//         <meta property="og:description" content="AxioQuan is a comprehensive learning platform offering expert-led courses, interactive curriculum, and career advancement opportunities." />
+//         <meta property="og:image" content={`${baseUrl}/images/AxioQuan.jpg`} />
+//         <meta property="og:url" content={baseUrl} />
+//         <meta property="og:type" content="website" />
+//         <meta property="og:site_name" content="AxioQuan" />
+        
+//         {/* Explicit Twitter Card tags */}
+//         <meta name="twitter:card" content="summary_large_image" />
+//         <meta name="twitter:title" content="AxioQuan - Learn, Grow, Succeed" />
+//         <meta name="twitter:description" content="AxioQuan is a comprehensive learning platform offering expert-led courses, interactive curriculum, and career advancement opportunities." />
+//         <meta name="twitter:image" content={`${baseUrl}/images/AxioQuan.jpg`} />
+//         <meta name="twitter:site" content="@axioquan" />
+        
 //         {/* Additional link tags for icons */}
-//         <link rel="shortcut icon" href="/favicon.ico" />
-//         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-//         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-//         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-//         <link rel="manifest" href="/site.webmanifest" />
+//         <link rel="shortcut icon" href={`${baseUrl}/favicon.ico`} />
+//         <link rel="apple-touch-icon" sizes="180x180" href={`${baseUrl}/apple-touch-icon.png`} />
+//         <link rel="icon" type="image/png" sizes="32x32" href={`${baseUrl}/favicon-32x32.png`} />
+//         <link rel="icon" type="image/png" sizes="16x16" href={`${baseUrl}/favicon-16x16.png`} />
+//         <link rel="manifest" href={`${baseUrl}/site.webmanifest`} />
 //       </head>
 //       <body className="min-h-screen bg-background" suppressHydrationWarning={true}>
 //         {children}
@@ -183,19 +161,12 @@
 
 
 
-
-
-
-
-
-
-
-
 // /src/app/layout.tsx
 
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 import type { Metadata } from 'next';
+import { SessionRefresher } from '@/components/auth/session-refresher';
 
 const baseUrl = 'https://axioquan-two.vercel.app';
 
@@ -331,6 +302,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background" suppressHydrationWarning={true}>
         {children}
+        <SessionRefresher />
         <Toaster position="top-right" />
       </body>
     </html>
