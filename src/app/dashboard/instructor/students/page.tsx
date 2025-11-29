@@ -2,7 +2,7 @@
 // /app/dashboard/instructor/students/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 
 export default async function InstructorStudents() {
   const session = await getSession()

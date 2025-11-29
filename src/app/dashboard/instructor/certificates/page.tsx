@@ -1,7 +1,7 @@
 // /app/dashboard/instructor/certificates/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import InstructorCertificatesPage from '@/components/dashboard/instructor-certificates-page'
 
 export default async function InstructorCertificates() {

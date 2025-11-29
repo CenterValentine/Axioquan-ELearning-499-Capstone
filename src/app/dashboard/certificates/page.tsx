@@ -2,7 +2,7 @@
 // /app/dashboard/certificates/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import StudentCertificatesPage from '@/components/dashboard/student-certificates-page'
 
 export default async function Certificates() {

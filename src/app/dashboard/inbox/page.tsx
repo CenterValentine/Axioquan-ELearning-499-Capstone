@@ -5,7 +5,7 @@
 
 import { useState } from "react"
 import { Search, Bell, MessageSquare, X, AlertCircle, Gift, Clock, Award, Megaphone } from "lucide-react"
-import AppShellSidebar from "@/components/shell/AppSidebarNav"
+import AppShellSidebar from "@/components/layout/AppSidebarNav"
 import { getSession } from "@/lib/auth/session"
 
 interface Notification {

@@ -5,8 +5,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Loader2, ChevronRight, Play, ArrowRight, Users, BookOpen, Star, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { Header } from '@/components/shell/header';
-import { Footer } from '@/components/shell/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import Image from 'next/image';
 
 type CourseAny = any;

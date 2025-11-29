@@ -2,7 +2,7 @@
 // /app/courses/watch/[courseId]/[lessonId]/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import VideoPlayerPage from '@/components/courses/video-player'
 
 interface WatchVideoPageProps {

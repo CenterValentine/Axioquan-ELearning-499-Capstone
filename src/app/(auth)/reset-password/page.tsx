@@ -4,8 +4,8 @@
 import { ResetPasswordForm } from '@/components/auth/reset-password-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { Header } from '@/components/shell/header';
-import { Footer } from '@/components/shell/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{ token?: string }>;

@@ -4,8 +4,8 @@ import { getCategoryBySlugAction } from '@/lib/categories/actions';
 import { getCoursesAction } from '@/lib/courses/actions';
 import { getTagsAction } from '@/lib/tags/actions';
 import { CategoryCoursesClient } from '@/components/categories/category-courses-client';
-import { Header } from '@/components/shell/header';
-import { Footer } from '@/components/shell/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { notFound } from 'next/navigation';
 
 interface CategoryPageProps {

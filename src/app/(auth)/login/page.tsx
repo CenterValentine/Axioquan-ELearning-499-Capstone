@@ -3,8 +3,8 @@
 
 import LoginForm from '@/components/auth/login-form';
 import Link from 'next/link';
-import { Header } from '@/components/shell/header';
-import { Footer } from '@/components/shell/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 export default function LoginPage() {
   return (

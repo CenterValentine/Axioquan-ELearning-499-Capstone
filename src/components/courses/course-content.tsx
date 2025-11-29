@@ -13,6 +13,9 @@ import { Star, Clock, BookOpen, Check, Globe, Calendar, Loader2 } from 'lucide-r
 import { createEnrollmentAction, cancelEnrollmentAction } from '@/lib/courses/actions';
 import { checkAuthStatus } from '@/lib/auth/actions';
 import { useToast } from '@/hooks/use-toast';
+import { CourseReviewsSection } from '@/components/courses/course-reviews-section';
+import { CourseCurriculum } from '@/components/courses/course-curriculum-alex';
+
 
 export interface CourseContentProps {
 course: Course;
@@ -37,6 +40,8 @@ export function CourseContent({course, modules, formatDuration, isEnrolled, setI
         return;
       }
 
+
+      // TO DO:
       if (isEnrolled) {
         // Navigate to course learning page
         router.push(`/courses/learn/${course.id}`);
@@ -121,8 +126,6 @@ export function CourseContent({course, modules, formatDuration, isEnrolled, setI
                 </div>
               )}
 
-
-
               {/* Target Audience */}
               {/* CourseTargetAudience audience: string[] */}
               {course.target_audience && course.target_audience.length > 0 && (
@@ -139,11 +142,11 @@ export function CourseContent({course, modules, formatDuration, isEnrolled, setI
                 </div>
               )}
 
-              <CourseCurriculumSection
-                course={course}
-                modules={modules}
-                formatDuration={formatDuration}
-              />
+              <CourseCurriculum 
+                  curriculum={modules}
+                  courseId={course.id}
+                  isEnrolled={isEnrolled}
+                />
             </div>
 
             {/* Sidebar */}
@@ -207,10 +210,18 @@ export function CourseContent({course, modules, formatDuration, isEnrolled, setI
                   30-day money-back guarantee. No questions asked.
                 </p>
               </div>
+
+             
             </div>
+
+            
           </div>
-        </section>
-    </>);
+          <CourseReviewsSection 
+                courseId={course.id}
+                courseSlug={course.slug}
+              />
+    </section>
+    </>)
 }
 
 interface CourseCurriculumSectionProps {

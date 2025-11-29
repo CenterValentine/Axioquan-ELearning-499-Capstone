@@ -4,24 +4,20 @@
 
 'use client';
 
-import { getCourseBySlugAction, getCourseModulesAction, checkEnrollmentAction } from '@/lib/courses/actions';
-import { Module } from '@lib/db/queries/curriculum';
+import { getCourseBySlugAction, getCourseCurriculumAction, checkEnrollmentAction } from '@/lib/courses/actions';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { useState, useEffect } from 'react';
-import { Header} from '@/components/shell/header';
-import { Footer } from '@/components/shell/footer';
-import { CourseHero } from '@/components/courses/CourseHero';
+import { Header} from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
+
+import { CourseHero } from '@/components/courses/course-hero';
 import { CourseInstructorSection } from '@/components/courses/CourseInstructorSection';
-import { CourseContent } from '@/components/courses/CourseContent';
-// import { CourseDescription } from '@/components/courses/CourseDescription';
-// import { CourseLearningObjectives } from '@/components/courses/CourseLearningObjectives';
-// import { CoursePrerequisites } from '@/components/courses/CoursePrerequisites';
-// import { CourseTargetAudience } from '@/components/courses/CourseTargetAudience';
-// import { CourseCurriculum } from '@/components/courses/CourseCurriculum';
-// import { CourseSidebar } from '@/components/courses/CourseSidebar';
+import { CourseContent } from '@/components/courses/course-content';
+import { Module } from '@lib/db/queries/curriculum';
 
 interface CoursePageProps {
   params: Promise<{
@@ -29,57 +25,95 @@ interface CoursePageProps {
   }>;
 }
 
+type CourseType = any; // TODO: replace with your actual Course type
+type CurriculumItem = any; // TODO: replace with your actual Module type
+
+const recordCourseView = async (courseId: string) => {
+    try {
+      const response = await fetch(`/api/courses/${courseId}/view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setViewCount(data.total_views);
+          console.log('✅ Course view recorded:', data.total_views);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error recording course view:', error);
+      // Don't show error to user - view counting is secondary
+    }
+  };
 
 export default function CoursePage({ params }: CoursePageProps) {
+
   const [course, setCourse] = useState<any>(null);
-  const [modules, setModules] = useState<Module[]>([]);
-  const [loading, setLoadingCourse] = useState(true);
-  const [modulesLoading, setLoadingModules] = useState(true);
+  const [curriculum, setCurriculum] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewCount, setViewCount] = useState<number>(0);
   const [isEnrolled, setIsEnrolled] = useState(false);
 
+    // Function to record course view
+  
+  
+
   useEffect(() => {
-    async function fetchCourseAndModules() {
+    async function fetchCourseAndCurriculum() {
       try {
-        setLoadingCourse(true);
-        setLoadingModules(true);
-
-
         const { slug } = await params;
         const courseResult = await getCourseBySlugAction(slug);
-        
+
         if (!courseResult.success || !courseResult.course) {
           setError('Course not found');
           return;
         }
 
-        setCourse(courseResult.course);
-        const modulesResult = await getCourseModulesAction(courseResult.course.id);
-        console.log('modulesResult', modulesResult);
-        setModules(modulesResult.modules ?? []);
+        const loadedCourse = courseResult.course;
+        setCourse(loadedCourse);
+        setViewCount(loadedCourse.total_views || 0);
 
-        // Check enrollment status
-        try {
-          const enrollmentResult = await checkEnrollmentAction(courseResult.course.id);
-          if (enrollmentResult.success && enrollmentResult.isEnrolled) {
-            setIsEnrolled(true);
+         // Fetch curriculum with course ID
+        if (loadedCourse.id) {
+          const curriculumResult = await getCourseCurriculumAction(loadedCourse.id);
+          if (curriculumResult.success) {
+            setCurriculum(curriculumResult.curriculum || []);
           }
-        } catch (err) {
-          // If not authenticated, enrollment check will fail silently
-          console.log('Enrollment check skipped (user not authenticated)');
+
+          // Check enrollment state/status for current user + course
+          try {
+            const enrollmentResult = await checkEnrollmentAction(loadedCourse.id);
+            // Adjust these field names if your action returns different keys
+            if (enrollmentResult?.success) {
+              setIsEnrolled(!!enrollmentResult.isEnrolled);
+            }
+          } catch (e) {
+            console.error('Error checking enrollment:', e);
+          }
+        }
+
+        // Record the view after course data is loaded
+        const updatedViews = await recordCourseView(loadedCourse.id);
+        if (typeof updatedViews === 'number') {
+          setViewCount(updatedViews);
         }
       } catch (err) {
-        console.error('Failed to load course or modules:', err);
         setError('Failed to load course');
-        setModules([]);
+        console.error('Error fetching course:', err);
       } finally {
-        setLoadingCourse(false);
-        setLoadingModules(false);
+        setLoading(false);
       }
     }
 
-    fetchCourseAndModules();
+fetchCourseAndCurriculum();
   }, [params]);
+  
+
 
   // Format video duration properly
   const formatDuration = (minutes: number | null | undefined) => {
@@ -111,21 +145,39 @@ export default function CoursePage({ params }: CoursePageProps) {
   }
 
   // Client component for interactive parts
-  function CourseClientContent({ course }: { course: any }) {
+function CourseClientContent(props: {
+    course: CourseType;
+    curriculum: CurriculumItem[];
+    isEnrolled: boolean;
+    setIsEnrolled: (value: boolean) => void;
+  }) {
+        const { course, curriculum, isEnrolled, setIsEnrolled } = props;
+
     const [expandedModule, setExpandedModule] = useState<number | null>(null);
+
     return (
       <div className="min-h-screen bg-background">
         <Header />
+        
+      {/* Hero Section */}
           <CourseHero course={course} formatDuration={formatDuration} isEnrolled={isEnrolled} setIsEnrolled={setIsEnrolled} />
-          {/* Instructor Section - not implimented because of undefined db fields */}
+ {/* Instructor Section */}
 
           <CourseInstructorSection course={course} />
           
-          <CourseContent course={course} modules={modules} formatDuration={formatDuration} isEnrolled={isEnrolled} setIsEnrolled={setIsEnrolled}  />
+
+                  {/* Main course content / curriculum */}
+
+          <CourseContent course={course} modules={curriculum} formatDuration={formatDuration} isEnrolled={isEnrolled} setIsEnrolled={setIsEnrolled}  />
         <Footer />
       </div>
     );
   }
 
-  return <CourseClientContent course={course} />;
+  return     <CourseClientContent
+      course={course}
+      curriculum={curriculum}
+      isEnrolled={isEnrolled}
+      setIsEnrolled={setIsEnrolled}
+    />
 }

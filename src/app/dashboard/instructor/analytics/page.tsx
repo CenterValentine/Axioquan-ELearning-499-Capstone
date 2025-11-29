@@ -2,7 +2,7 @@
 // /app/dashboard/instructor/analytics/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 
 export default async function InstructorAnalytics() {
   const session = await getSession()

@@ -6,7 +6,7 @@ import { getSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { RealTimeProvider } from '@/components/providers/realtime-provider';
 import { RoleRefreshHandler } from '@/components/auth/role-refresh-handler';
-import AppShellSidebar from '@/components/shell/AppSidebarNav';
+import AppShellSidebar from '@/components/layout/AppSidebarNav';
 import { sql } from '@/lib/db';
 
 export default async function DashboardLayout({

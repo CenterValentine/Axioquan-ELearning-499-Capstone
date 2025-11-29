@@ -1,5 +1,7 @@
+// Comments?
+
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import MyCoursesPage, { type MyCourse } from '@/components/dashboard/my-courses'
 import { getUserEnrolledCourses } from '@/lib/db/queries/enrollments'
 

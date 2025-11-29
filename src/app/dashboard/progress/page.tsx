@@ -2,7 +2,7 @@
 // /app/dashboard/progress/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import AppShellSidebar from '@/components/shell/AppSidebarNav'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import ProgressPage from '@/components/dashboard/progress-page'
 
 export default async function Progress() {

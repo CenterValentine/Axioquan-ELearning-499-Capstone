@@ -2,8 +2,8 @@
 // // /src/app/(auth)/signup/page.tsx
 
 import SignUpForm from '@/components/auth/signup-form';
-import { Header } from '@/components/shell/header';
-import { Footer } from '@/components/shell/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import Link from 'next/link';
 
 export default function SignUpPage() {
