@@ -13,7 +13,10 @@ import {
   publishCourse,
   unpublishCourse
 } from '@/lib/db/queries/courses';
-import { requireRole, requireAuth } from '@/lib/auth/utils'; // USE requireAuth instead
+import { getCourseCurriculum } from '@/lib/db/queries/curriculum';
+import { createEnrollment, cancelEnrollment, getEnrollmentByUserAndCourse } from '@/lib/db/queries/enrollments';
+import { requireAuth } from '@/lib/auth/utils';
+import { getSession } from '@/lib/auth/session';
 import type { CreateCourseData, UpdateCourseData } from '@/types/courses';
 
 /**
@@ -109,6 +112,31 @@ export async function getCourseBySlugAction(slug: string): Promise<{
 }
 
 /**
+ * Get course curriculum (public)
+ */
+export async function getCourseCurriculumAction(courseId: string): Promise<{
+  success: boolean;
+  curriculum?: any[];
+  errors?: string[];
+}> {
+  try {
+    const curriculum = await getCourseCurriculum(courseId);
+    
+    return {
+      success: true,
+      curriculum
+    };
+  } catch (error: any) {
+    console.error('❌ Error fetching course curriculum:', error);
+    return {
+      success: false,
+      errors: [error.message || 'An unexpected error occurred'],
+      curriculum: []
+    };
+  }
+}
+
+/**
  * Get instructor's courses
  */
 export async function getInstructorCoursesAction(): Promise<{
@@ -117,7 +145,7 @@ export async function getInstructorCoursesAction(): Promise<{
   errors?: string[];
 }> {
   try {
-    const session = await requireAuth(); // USE requireAuth instead of getSession
+    const session = await requireAuth();
     
     const courses = await getInstructorCourses(session.userId);
     
@@ -144,7 +172,7 @@ export async function createCourseAction(courseData: CreateCourseData): Promise<
   errors?: string[];
 }> {
   try {
-    const session = await requireAuth(); // USE requireAuth instead of getSession
+    const session = await requireAuth();
     
     // Check if user is instructor or admin
     if (!session.roles.includes('instructor') && !session.roles.includes('admin')) {
@@ -176,7 +204,7 @@ export async function updateCourseAction(id: string, courseData: UpdateCourseDat
   errors?: string[];
 }> {
   try {
-    const session = await requireAuth(); // USE requireAuth instead of getSession
+    const session = await requireAuth();
 
     // If user is admin, allow updating any course
     // If user is instructor, only allow updating their own courses
@@ -202,7 +230,7 @@ export async function deleteCourseAction(id: string): Promise<{
   errors?: string[];
 }> {
   try {
-    const session = await requireAuth(); // USE requireAuth instead of getSession
+    const session = await requireAuth();
 
     // If user is admin, allow deleting any course
     // If user is instructor, only allow deleting their own courses
@@ -229,7 +257,7 @@ export async function publishCourseAction(id: string): Promise<{
   errors?: string[];
 }> {
   try {
-    const session = await requireAuth(); // USE requireAuth instead of getSession
+    const session = await requireAuth();
 
     // Only instructors can publish courses
     if (!session.roles.includes('instructor') && !session.roles.includes('admin')) {
@@ -261,7 +289,7 @@ export async function unpublishCourseAction(id: string): Promise<{
   errors?: string[];
 }> {
   try {
-    const session = await requireAuth(); // USE requireAuth instead of getSession
+    const session = await requireAuth();
 
     // Only instructors can unpublish courses
     if (!session.roles.includes('instructor') && !session.roles.includes('admin')) {
@@ -278,6 +306,110 @@ export async function unpublishCourseAction(id: string): Promise<{
     return {
       success: false,
       message: 'Failed to unpublish course',
+      errors: [error.message || 'An unexpected error occurred']
+    };
+  }
+}
+
+/**
+ * Create enrollment (authenticated users only)
+ */
+export async function createEnrollmentAction(courseId: string): Promise<{
+  success: boolean;
+  message: string;
+  enrollment?: any;
+  errors?: string[];
+}> {
+  try {
+    const session = await requireAuth();
+
+    // Get course to retrieve price and access type
+    const course = await getCourseById(courseId);
+    
+    if (!course) {
+      return {
+        success: false,
+        message: 'Course not found',
+        errors: ['Course not found']
+      };
+    }
+
+    // Check if course is published
+    if (!course.is_published) {
+      return {
+        success: false,
+        message: 'Course not available',
+        errors: ['This course is not currently available for enrollment']
+      };
+    }
+
+    const priceCents = course.price_cents || 0;
+    const accessType = course.access_type || 'open';
+
+    return await createEnrollment(session.userId, courseId, priceCents, accessType);
+  } catch (error: any) {
+    console.error('❌ Error creating enrollment:', error);
+    return {
+      success: false,
+      message: 'Failed to enroll in course',
+      errors: [error.message || 'An unexpected error occurred']
+    };
+  }
+}
+
+/**
+ * Cancel enrollment (authenticated users only)
+ */
+export async function cancelEnrollmentAction(courseId: string): Promise<{
+  success: boolean;
+  message: string;
+  errors?: string[];
+}> {
+  try {
+    const session = await requireAuth();
+
+    return await cancelEnrollment(session.userId, courseId);
+  } catch (error: any) {
+    console.error('❌ Error cancelling enrollment:', error);
+    return {
+      success: false,
+      message: 'Failed to unenroll from course',
+      errors: [error.message || 'An unexpected error occurred']
+    };
+  }
+}
+
+/**
+ * Check enrollment status for current user (works for both authenticated and unauthenticated users)
+ */
+export async function checkEnrollmentAction(courseId: string): Promise<{
+  success: boolean;
+  isEnrolled: boolean;
+  errors?: string[];
+}> {
+  try {
+    const session = await getSession();
+
+    // If user is not authenticated, they are not enrolled
+    if (!session) {
+      return {
+        success: true,
+        isEnrolled: false
+      };
+    }
+
+    // Check if user has an active enrollment for this course
+    const enrollment = await getEnrollmentByUserAndCourse(session.userId, courseId);
+
+    return {
+      success: true,
+      isEnrolled: !!enrollment
+    };
+  } catch (error: any) {
+    console.error('❌ Error checking enrollment:', error);
+    return {
+      success: false,
+      isEnrolled: false,
       errors: [error.message || 'An unexpected error occurred']
     };
   }

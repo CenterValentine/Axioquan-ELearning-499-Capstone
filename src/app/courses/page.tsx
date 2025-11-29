@@ -1,3 +1,4 @@
+// main courses page for public
 
 // /app/courses/page.tsx
 

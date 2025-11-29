@@ -1,6 +1,8 @@
 
 
 // /components/curriculum/curriculum-builder.tsx
+// uses /components/curriculum/module-accordion.tsx and /components/curriculum/lesson-editor.tsx
+
 
 'use client';
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import {
   ChevronDown,
@@ -51,10 +51,11 @@ interface CourseData {
 }
 
 interface CourseLearningProps {
-  courseId: string
+  courseId: string;
+  modules: Module[]; // from curriculum.ts - Module interface
 }
 
-export default function CourseLearningPage({ courseId }: CourseLearningProps) {
+export default function CourseLearningPage({ courseId, modules }: CourseLearningProps) {
   const [currentModule, setCurrentModule] = useState(0)
   const [currentLesson, setCurrentLesson] = useState(0)
   const [expandedModules, setExpandedModules] = useState<number[]>([0])
@@ -66,45 +67,30 @@ export default function CourseLearningPage({ courseId }: CourseLearningProps) {
   const [notes, setNotes] = useState("")
   const [isVideoExpanded, setIsVideoExpanded] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  
+  // Track completed lessons by lesson ID
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set())
 
-  // Mock course data - you'll replace this with API data later
   const courseData: CourseData = {
     id: courseId,
-    title: "Advanced React Masterclass",
-    description: "Master React with modern patterns and best practices",
-    instructor: "Sarah Anderson",
-    modules: [
-      {
-        id: "1",
-        title: "Module 1: React Fundamentals",
-        progress: 100,
-        lessons: [
-          { id: "1-1", title: "Understanding JSX", duration: 1200, watched: 1200, type: "video", completed: true },
-          { id: "1-2", title: "Components and Props", duration: 1500, watched: 800, type: "video", completed: false },
-          { id: "1-3", title: "State Management Basics", duration: 1800, watched: 0, type: "video", completed: false },
-        ],
-      },
-      {
-        id: "2",
-        title: "Module 2: Hooks Deep Dive",
-        progress: 45,
-        lessons: [
-          { id: "2-1", title: "useState Hook", duration: 1400, watched: 0, type: "video", completed: false },
-          { id: "2-2", title: "useEffect Hook", duration: 1600, watched: 0, type: "video", completed: false },
-          { id: "2-3", title: "Custom Hooks", duration: 1900, watched: 0, type: "video", completed: false },
-        ],
-      },
-      {
-        id: "3",
-        title: "Module 3: Context API & Redux",
-        progress: 0,
-        lessons: [
-          { id: "3-1", title: "Context API Introduction", duration: 1300, watched: 0, type: "video", completed: false },
-          { id: "3-2", title: "Redux Fundamentals", duration: 2000, watched: 0, type: "video", completed: false },
-        ],
-      },
-    ],
+    title: "", // Course title not available in props
+    description: "", // Course description not available in props
+    instructor: "", // Instructor name not available in props
+    modules: modules,
   }
+
+  // Initialize completed lessons from props when component loads or modules change
+  useEffect(() => {
+    const completed = new Set<string>()
+    modules.forEach(module => {
+      module.lessons.forEach(lesson => {
+        if (lesson.completed) {
+          completed.add(lesson.id)
+        }
+      })
+    })
+    setCompletedLessons(completed)
+  }, [modules])
 
   const toggleModule = (index: number) => {
     setExpandedModules((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]))
@@ -124,9 +110,27 @@ export default function CourseLearningPage({ courseId }: CourseLearningProps) {
     }
   }
 
-  const completeLesson = () => {
-    courseData.modules[currentModule].lessons[currentLesson].completed = true
+  // Helper to check if a lesson is completed (checks both state and props)
+  const isLessonCompleted = (lessonId: string) => {
+    return completedLessons.has(lessonId)
   }
+
+  const completeLesson = () => {
+    const lessonId = courseData.modules[currentModule].lessons[currentLesson].id
+    setCompletedLessons(prev => {
+      const updated = new Set(prev)
+      updated.add(lessonId)
+      return updated
+    })
+    // TODO: Call server action to persist completion status to database
+  }
+
+  // Get current lesson's completed status
+  const isCurrentLessonCompleted = useMemo(() => {
+    if (!courseData.modules[currentModule]?.lessons[currentLesson]) return false
+    const lessonId = courseData.modules[currentModule].lessons[currentLesson].id
+    return completedLessons.has(lessonId)
+  }, [currentModule, currentLesson, completedLessons, courseData.modules])
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -134,7 +138,7 @@ export default function CourseLearningPage({ courseId }: CourseLearningProps) {
     return `${minutes}:${secs.toString().padStart(2, "0")}`
   }
 
-  const currentLessonData = courseData.modules[currentModule].lessons[currentLesson]
+  const currentLessonData = courseData.modules[currentModule].lessons[currentLesson] as Lesson
   const progressPercentage = (currentLessonData.watched / currentLessonData.duration) * 100
   const overallProgress = Math.round(courseData.modules.reduce((sum, m) => sum + m.progress, 0) / courseData.modules.length)
 
@@ -294,8 +298,8 @@ const AxioQuanLogo = ({ size = "default" }: { size?: "default" | "small" }) => (
                           : "hover:bg-gray-100 text-foreground"
                       }`}
                     >
-                      {lesson.completed ? (
-                        <CheckCircle2 size={16} className="flex-shrink-0" />
+                      {completedLessons.has(lesson.id) ? (
+                        <CheckCircle2 size={16} className="flex-shrink-0 text-green-500" />
                       ) : (
                         <Play size={16} className="flex-shrink-0" />
                       )}
@@ -362,8 +366,8 @@ const AxioQuanLogo = ({ size = "default" }: { size?: "default" | "small" }) => (
                           : "hover:bg-gray-100 text-foreground"
                       }`}
                     >
-                      {lesson.completed ? (
-                        <CheckCircle2 size={16} className="flex-shrink-0" />
+                      {completedLessons.has(lesson.id) ? (
+                        <CheckCircle2 size={16} className="flex-shrink-0 text-green-500" />
                       ) : (
                         <Play size={16} className="flex-shrink-0" />
                       )}
@@ -503,13 +507,21 @@ const AxioQuanLogo = ({ size = "default" }: { size?: "default" | "small" }) => (
                   </div>
                   <button
                     onClick={completeLesson}
-                    className={`px-6 py-3 rounded-lg font-semibold transition whitespace-nowrap w-full md:w-auto ${
-                      currentLessonData.completed
-                        ? "bg-green-100 text-green-800"
+                    disabled={isCurrentLessonCompleted}
+                    className={`px-6 py-3 rounded-lg font-semibold transition whitespace-nowrap w-full md:w-auto flex items-center gap-2 justify-center ${
+                      isCurrentLessonCompleted
+                        ? "bg-green-100 text-green-800 cursor-not-allowed"
                         : "bg-primary text-primary-foreground hover:opacity-90"
                     }`}
                   >
-                    {currentLessonData.completed ? "Completed" : "Mark Complete"}
+                    {isCurrentLessonCompleted ? (
+                      <>
+                        <CheckCircle2 size={20} className="text-green-600" />
+                        <span>Completed</span>
+                      </>
+                    ) : (
+                      "Mark Complete"
+                    )}
                   </button>
                 </div>
               </div>

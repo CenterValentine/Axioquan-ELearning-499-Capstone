@@ -5,7 +5,7 @@
 
 import { useState } from "react"
 import { Search, Bell, MessageSquare, X, AlertCircle, Gift, Clock, Award, Megaphone } from "lucide-react"
-import Sidebar from "@/components/dashboard/sidebar"
+import AppShellSidebar from "@/components/layout/AppSidebarNav"
 import { getSession } from "@/lib/auth/session"
 
 interface Notification {
@@ -178,7 +178,7 @@ export default function InboxPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar user={{
+      <AppShellSidebar user={{
         id: '1',
         name: 'User',
         email: 'user@example.com',

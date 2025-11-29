@@ -1,6 +1,9 @@
 
 // /components/curriculum/module-accordion.tsx
 
+// Used in /components/curriculum/curriculum-builder.tsx
+// 
+
 'use client';
 
 import { useState } from 'react';

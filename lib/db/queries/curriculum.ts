@@ -18,8 +18,8 @@ export interface Module {
   video_duration: number;
   learning_objectives: string[];
   key_concepts: string[];
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string; // Date in DB queries, string when serialized from server actions
+  updated_at: Date | string; // Date in DB queries, string when serialized from server actions
   lessons?: Lesson[];
 }
 
@@ -66,8 +66,8 @@ export interface Lesson {
   average_completion_time: number;
   completion_rate: number;
   engagement_score: number;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string; // Date in DB queries, string when serialized from server actions
+  updated_at: Date | string; // Date in DB queries, string when serialized from server actions
   transcripts?: LessonTranscript[];
 }
 
@@ -79,8 +79,57 @@ export interface LessonTranscript {
   word_count: number;
   is_auto_generated: boolean;
   confidence_score: number;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string; // Date in DB queries, string when serialized from server actions
+  updated_at: Date | string; // Date in DB queries, string when serialized from server actions
+}
+
+/**
+ * Get course curriculum with modules and lessons
+ */
+export async function getCourseCurriculum(courseId: string): Promise<Module[]> {
+  try {
+    const curriculum = await sql`
+      SELECT 
+        m.*,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', l.id,
+              'module_id', l.module_id,
+              'course_id', l.course_id,
+              'title', l.title,
+              'slug', l.slug,
+              'description', l.description,
+              'lesson_type', l.lesson_type,
+              'content_type', l.content_type,
+              'difficulty', l.difficulty,
+              'video_url', l.video_url,
+              'video_duration', l.video_duration,
+              'video_thumbnail', l.video_thumbnail,
+              'document_url', l.document_url,
+              'content_html', l.content_html,
+              'order_index', l.order_index,
+              'is_published', l.is_published,
+              'is_preview', l.is_preview,
+              'view_count', l.view_count,
+              'created_at', l.created_at,
+              'updated_at', l.updated_at
+            ) ORDER BY l.order_index ASC
+          ) FILTER (WHERE l.id IS NOT NULL),
+          '[]'::json
+        ) as lessons
+      FROM modules m
+      LEFT JOIN lessons l ON m.id = l.module_id AND l.is_published = true
+      WHERE m.course_id = ${courseId} AND m.is_published = true
+      GROUP BY m.id, m.title, m.description, m.order_index, m.created_at, m.updated_at
+      ORDER BY m.order_index ASC
+    `;
+    
+    return curriculum as Module[];
+  } catch (error) {
+    console.error('❌ Error fetching course curriculum:', error);
+    return [];
+  }
 }
 
 /**
@@ -88,11 +137,23 @@ export interface LessonTranscript {
  */
 export async function getCourseModules(courseId: string, includeLessons: boolean = false): Promise<Module[]> {
   try {
+    // console.log('[DB] getCourseModules called with:', { courseId, includeLessons });
+    
     const modules = await sql`
       SELECT * FROM modules 
       WHERE course_id = ${courseId} 
       ORDER BY order_index ASC, created_at ASC
     `;
+
+    // console.log('🔍 [DB] Raw modules query result:', {
+    //   count: modules.length,
+    //   modules: modules.map(m => ({
+    //     id: m.id,
+    //     title: m.title,
+    //     course_id: m.course_id,
+    //     is_published: m.is_published
+    //   }))
+    // });
 
     if (includeLessons) {
       for (const module of modules) {
@@ -101,9 +162,24 @@ export async function getCourseModules(courseId: string, includeLessons: boolean
           WHERE module_id = ${module.id} AND is_published = true
           ORDER BY order_index ASC, created_at ASC
         `;
-        module.lessons = lessons as Lesson[];
+        module.lessons = (lessons as Lesson[]) || [];
+        // console.log(`[DB] Module "${module.title}" has ${module.lessons.length} lessons`);
+      }
+    } else {
+      // Ensure lessons is always an array, even when not included
+      for (const module of modules) {
+        module.lessons = [];
       }
     }
+
+    // console.log(' [DB] getCourseModules returning:', {
+    //   count: modules.length,
+    //   modules: modules.map(m => ({
+    //     id: m.id,
+    //     title: m.title,
+    //     lessonsCount: m.lessons?.length || 0
+    //   }))
+    // });
 
     return modules as Module[];
   } catch (error) {
