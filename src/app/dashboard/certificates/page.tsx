@@ -2,7 +2,7 @@
 // /app/dashboard/certificates/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import Sidebar from '@/components/dashboard/sidebar'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import StudentCertificatesPage from '@/components/dashboard/student-certificates-page'
 
 export default async function Certificates() {
@@ -30,7 +30,7 @@ export default async function Certificates() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar user={user} />
+      <AppShellSidebar user={user} />
       <main className="flex-1 overflow-auto">
         <StudentCertificatesPage />
       </main>

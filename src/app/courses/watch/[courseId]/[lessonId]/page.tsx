@@ -2,7 +2,7 @@
 // /app/courses/watch/[courseId]/[lessonId]/page.tsx
 
 import { getSession } from '@/lib/auth/session'
-import Sidebar from '@/components/dashboard/sidebar'
+import AppShellSidebar from '@/components/layout/AppSidebarNav'
 import VideoPlayerPage from '@/components/courses/video-player'
 
 interface WatchVideoPageProps {
@@ -36,7 +36,7 @@ export default async function WatchVideoPage({ params }: WatchVideoPageProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar user={user} />
+      <AppShellSidebar user={user} />
       <VideoPlayerPage courseId={params.courseId} lessonId={params.lessonId} />
     </div>
   )

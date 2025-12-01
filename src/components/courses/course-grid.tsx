@@ -1,6 +1,8 @@
 // // /src/components/courses/course-grid.tsx
 
 'use client';
+// Used in /app/courses/page.tsx
+// Uses /components/courses/course-card.tsx
 
 import React from 'react';
 import Link from 'next/link';

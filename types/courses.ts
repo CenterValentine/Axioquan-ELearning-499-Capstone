@@ -39,7 +39,7 @@ export interface Course {
   // Rich media support
   thumbnail_url?: string;
   promo_video_url?: string;
-  materials_url?: string; // ✅ FIX — add this line
+  materials_url?: string;
   video_preview_url?: string;
   image_gallery?: string[];
   trailer_duration: number;
@@ -91,6 +91,11 @@ export interface Course {
   completion_rate: number;
   engagement_score: number;
   
+  // Social metrics (ADDED)
+  like_count: number;
+  share_count: number;
+  favorite_count: number;
+  
   // SEO & discoverability
   meta_title?: string;
   meta_description?: string;
@@ -107,6 +112,7 @@ export interface Course {
   instructor_name?: string;
   instructor_email?: string;
   instructor_image?: string | null;
+  instructor_bio?: string;
   category_name?: string;
   category_slug?: string;
   tags?: CourseTag[];
@@ -126,7 +132,7 @@ export interface CreateCourseData {
   content_type?: string;
   thumbnail_url?: string;
   promo_video_url?: string;
-  materials_url?: string;  // <-- ADD this line
+  materials_url?: string;
   total_video_duration?: number;
   price_cents?: number;
   certificate_available?: boolean;
@@ -150,7 +156,7 @@ export interface UpdateCourseData {
   content_type?: string;
   thumbnail_url?: string;
   promo_video_url?: string;
-  materials_url?: string; // ADD THIS LINE
+  materials_url?: string;
   total_video_duration?: number;
   price_cents?: number;
   certificate_available?: boolean;
