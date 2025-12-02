@@ -301,7 +301,7 @@ function CategoriesSection({ categories }: { categories: CategoryAny[] }) {
 }
 
 // Auto Slider Component with 6 Images
-function AutoSlider() {
+function AutoSlider({ isAuthenticated }: { isAuthenticated: boolean }) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
@@ -319,7 +319,8 @@ function AutoSlider() {
       description: 'Share your knowledge and earn money teaching',
       cta: 'Start Teaching',
       image: '/images/react-course-hero.jpg',
-      link: '/admin-signup'
+      link: isAuthenticated ? "/dashboard/request-upgrade" : "/signup" // this 
+      
     },
     {
       id: 3,
@@ -456,46 +457,53 @@ function AutoSlider() {
   );
 }
 
+
+
 export default function HomePage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // added by joseph - this brings the authentication to te homepage
   const [courses, setCourses] = useState<CourseAny[]>([]);
   const [categories, setCategories] = useState<CategoryAny[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+ 
   useEffect(() => {
-    let isMounted = true;
-    
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  let isMounted = true;
+  
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const [coursesRes, categoriesRes] = await Promise.all([
-          fetch('/api/courses?is_published=true&limit=100'), // Increased limit for load more
-          fetch('/api/categories')
-        ]);
+      const [coursesRes, categoriesRes, authRes] = await Promise.all([
+        fetch('/api/courses?is_published=true&limit=100'),
+        fetch('/api/categories'),
+        fetch('/api/auth/status') // checking if user is already signed up or not.
+      ]);
 
-        if (!coursesRes.ok) throw new Error('Failed to load courses');
-        if (!categoriesRes.ok) throw new Error('Failed to load categories');
+      if (!coursesRes.ok) throw new Error('Failed to load courses');
+      if (!categoriesRes.ok) throw new Error('Failed to load categories');
 
-        const coursesData = await coursesRes.json();
-        const categoriesData = await categoriesRes.json();
+      const coursesData = await coursesRes.json();
+      const categoriesData = await categoriesRes.json();
+      const authData = await authRes.json(); // checks the response 
 
-        if (isMounted) {
-          setCourses(Array.isArray(coursesData) ? coursesData : coursesData.courses || []);
-          setCategories(Array.isArray(categoriesData) ? categoriesData : categoriesData.categories || []);
-        }
-      } catch (err: any) {
-        console.error('Homepage fetch error', err);
-        if (isMounted) setError(err.message || 'Failed to load data');
-      } finally {
-        if (isMounted) setLoading(false);
+      if (isMounted) {
+        setCourses(Array.isArray(coursesData) ? coursesData : coursesData.courses || []);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : categoriesData.categories || []);
+        setIsAuthenticated(authData.isAuthenticated || false); // added by joseph
       }
-    };
+    } catch (err: any) {
+      console.error('Homepage fetch error', err);
+      if (isMounted) setError(err.message || 'Failed to load data');
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  };
 
-    fetchData();
+  fetchData();
 
-    return () => { isMounted = false; };
+  return () => { isMounted = false; };
   }, []);
 
   // All courses for load more functionality
@@ -505,7 +513,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <AutoSlider />
+     <AutoSlider isAuthenticated={isAuthenticated} />
 
       {/* Call to Action Section */}
       <section className="py-16 bg-gradient-to-r from-primary/10 to-secondary/10">
@@ -563,12 +571,18 @@ export default function HomePage() {
                   24/7 Support Team
                 </li>
               </ul>
-              <Link
-                href="/admin-signup"
+              {/* <Link
+                href="/signup"  
                 className="inline-block bg-white text-primary font-semibold px-6 py-3 rounded-full hover:opacity-90 transition"
               >
                 Become an Instructor <ArrowRight className="inline ml-2" size={18} />
-              </Link>
+              </Link> */}
+              <Link
+              href={isAuthenticated ? "/dashboard/request-upgrade" : "/signup"}  
+              className="inline-block bg-white text-primary font-semibold px-6 py-3 rounded-full hover:opacity-90 transition"
+            >
+              Become an Instructor <ArrowRight className="inline ml-2" size={18} />
+            </Link>
             </div>
           </div>
         </div>
