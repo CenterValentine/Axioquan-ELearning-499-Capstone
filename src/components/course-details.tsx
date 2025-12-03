@@ -6,7 +6,7 @@ export default function CourseDetails({ course, curriculum }: any) {
       <h1 className="text-3xl font-bold">{course.title}</h1>
       <p className="text-gray-600 mt-2">{course.description}</p>
 
-      {/* AFFICHER CURRICULUM NAN */}
+      {/* Display CURRICULUM */}
       <CurriculumDisplay modules={curriculum} />
     </div>
   );

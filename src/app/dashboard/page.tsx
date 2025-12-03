@@ -41,6 +41,14 @@ const sampleCourses = [
     progress: 25,
     category: 'Programming',
   },
+  {
+  id: 4,
+  title: 'Foundations of Mathematics',
+  description: 'Core mathematical concepts and problem-solving skills',
+  icon: '🔢',
+  progress: 0,
+  category: 'Mathematics',
+},
 ];
 
 export default async function DashboardPage() {
