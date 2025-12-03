@@ -4,10 +4,56 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   completeLessonAction,
   updateWatchedTimeAction,
+  getLessonProgressAction,
 } from "@/lib/courses/progress-actions";
 
 interface RouteParams {
   params: Promise<{ id: string; lessonId: string }>;
+}
+
+/**
+ * GET - Get lesson progress (watched time and completion status)
+ */
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id: courseId, lessonId } = await params;
+    const result = await getLessonProgressAction(courseId);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: "Failed to get lesson progress",
+          errors: result.errors || [],
+        },
+        { status: 400 }
+      );
+    }
+
+    // Extract watched time for the specific lesson from the map
+    if (lessonId && result.progress) {
+      const lessonProgress = result.progress.get(lessonId);
+      return NextResponse.json({
+        watched: lessonProgress?.watched || 0,
+        completed: lessonProgress?.completed || false,
+        completed_at: lessonProgress?.completed_at || null,
+      });
+    }
+
+    return NextResponse.json({
+      progress: result.progress,
+    });
+  } catch (error: any) {
+    console.error("API Error getting lesson progress:", error);
+
+    if (error.message?.includes("unauthorized")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
 
 /**

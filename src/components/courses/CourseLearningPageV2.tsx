@@ -345,6 +345,7 @@ export default function CourseLearningPage({
         currentLesson={currentLesson}
         onClose={() => setIsVideoExpanded(false)}
         watched={currentLessonData.watched}
+        courseId={courseId}
       />
     );
   }

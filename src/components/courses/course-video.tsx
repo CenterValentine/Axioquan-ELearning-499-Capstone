@@ -6,6 +6,12 @@ import { CourseData } from "@/types/lesson";
 import { Play, Expand } from "lucide-react";
 import Link from "next/link";
 import CourseProgress from "./course-progress";
+import {
+  getVideoType,
+  getYouTubeEmbedUrl,
+  getVimeoEmbedUrl,
+  isDirectVideo,
+} from "@/lib/utils/video-detection";
 
 interface CourseVideoProps {
   courseData: CourseData;
@@ -23,26 +29,15 @@ export function CourseVideo({
   const videoUrl =
     courseData.modules[currentModule].lessons[currentLesson].video_url ||
     "https://www.youtube.com/watch?v=W6mI2O078qg"; // rickroll
-  const isYouTubeVideo =
-    courseData.modules[currentModule].lessons[currentLesson].lesson_type ===
-      "video" &&
-    courseData.modules[currentModule].lessons[
-      currentLesson
-    ].video_url?.includes("youtube.com");
-  const isVimeoVideo =
-    courseData.modules[currentModule].lessons[currentLesson].lesson_type ===
-      "video" &&
-    courseData.modules[currentModule].lessons[
-      currentLesson
-    ].video_url?.includes("vimeo.com");
-  const isMP4Video =
-    courseData.modules[currentModule].lessons[currentLesson].lesson_type ===
-      "video" &&
-    courseData.modules[currentModule].lessons[
-      currentLesson
-    ].video_url?.includes(".mp4");
+  
+  const videoType = getVideoType(videoUrl);
+  const isYouTubeVideo = videoType === "youtube";
+  const isVimeoVideo = videoType === "vimeo";
+  const isMP4Video = isDirectVideo(videoUrl);
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
+  const vimeoEmbedUrl = getVimeoEmbedUrl(videoUrl);
 
-  if (isYouTubeVideo) {
+  if (isYouTubeVideo && youtubeEmbedUrl) {
     return (
       <>
         {/* Video Player Section - Full Width */}
@@ -51,7 +46,7 @@ export function CourseVideo({
             <div className="bg-black rounded-xl overflow-hidden relative w-full aspect-video max-w-4xl md:min-w-[896px] mx-auto shadow-lg">
               <iframe
                 className="w-full h-full"
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"
+                src={youtubeEmbedUrl}
                 title="AxioQuan video player"
                 allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen={true}
@@ -72,7 +67,7 @@ export function CourseVideo({
         </div>
       </>
     );
-  } else if (isVimeoVideo) {
+  } else if (isVimeoVideo && vimeoEmbedUrl) {
     return (
       <>
         {/* Video Player Section - Full Width */}
@@ -81,7 +76,7 @@ export function CourseVideo({
             <div className="bg-black rounded-xl overflow-hidden relative w-full aspect-video max-w-4xl md:min-w-[896px] mx-auto shadow-lg">
               <iframe
                 className="w-full h-full"
-                src="https://www.vimeo.com/embed/dQw4w9WgXcQ"
+                src={vimeoEmbedUrl}
                 title="AxioQuan video player"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen={true}
