@@ -1,7 +1,6 @@
 // /app/courses/watch/[courseId]/[lessonId]/page.tsx
 
 import { getSession } from "@/lib/auth/session";
-import AppShellSidebar from "@/components/layout/AppSidebarNav";
 import VideoPlayerPage from "@/components/courses/video-player";
 import { getLessonAction } from "@/lib/courses/curriculum-actions";
 import { getCourseById } from "@/lib/db/queries/courses";
@@ -53,24 +52,13 @@ export default async function WatchVideoPage({
   // Fetch course data for title/description
   const course = await getCourseById(courseId);
 
-  const user = {
-    id: session.userId,
-    name: "Student User",
-    email: "student@example.com",
-    primaryRole: session.primaryRole || "student",
-    image: undefined,
-  };
-
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppShellSidebar user={user} />
-      <VideoPlayerPage
-        courseId={courseId}
-        lessonId={lessonId}
-        lesson={lessonResult.lesson}
-        courseTitle={course?.title}
-        courseDescription={course?.description}
-      />
-    </div>
+    <VideoPlayerPage
+      courseId={courseId}
+      lessonId={lessonId}
+      lesson={lessonResult.lesson}
+      courseTitle={course?.title}
+      courseDescription={course?.short_description || course?.description_html || undefined}
+    />
   );
 }
