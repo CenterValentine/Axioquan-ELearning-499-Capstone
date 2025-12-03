@@ -28,7 +28,7 @@ import { LessonPlayer } from "../curriculum/lesson-player";
 import { CourseVideo } from "./course-video";
 import { CourseData, Module, Lesson } from "@/types/lesson";
 import { CourseProgressBar1, CourseProgressBar2 } from "./course-progress";
-import { FullScreenVideoPlayer } from "./fullscreen-video-player";
+import { FullScreenVideoPlayer } from "../curriculum/video/fullscreen-video-player";
 
 interface CourseLearningProps {
   courseId: string;
@@ -315,6 +315,8 @@ export default function CourseLearningPage({
     currentLesson
   ] as Lesson;
 
+  const currentModuleLessons = courseData.modules[currentModule].lessons as Lesson[];
+
   // AxioQuan Logo Component
   // AxioQuan Logo Component - Larger version
   const AxioQuanLogo = ({
@@ -344,7 +346,6 @@ export default function CourseLearningPage({
         currentModule={currentModule}
         currentLesson={currentLesson}
         onClose={() => setIsVideoExpanded(false)}
-        watched={currentLessonData.watched}
         courseId={courseId}
       />
     );
@@ -605,7 +606,9 @@ export default function CourseLearningPage({
           <CourseVideo
             courseData={courseData}
             currentModule={currentModule}
-            currentLesson={currentLesson}
+            currentLesson={currentLessonData.id}
+            currentModuleLessons={currentModuleLessons}
+            onExpand={() => setIsVideoExpanded(true)}
           />
 
           {/* Lesson Header - Full Width but content constrained */}

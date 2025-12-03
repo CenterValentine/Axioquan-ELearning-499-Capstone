@@ -1,4 +1,4 @@
-//  /components/courses/video-player.tsx
+//  /components/courses/video/video-player.tsx
 
 "use client";
 
@@ -52,3 +52,4 @@ export default function VideoPlayerPage({
     </div>
   );
 }
+

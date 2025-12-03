@@ -1,7 +1,7 @@
 // /app/courses/watch/[courseId]/[lessonId]/page.tsx
 
 import { getSession } from "@/lib/auth/session";
-import VideoPlayerPage from "@/components/courses/video-player";
+import VideoPlayerPage from "@/components/curriculum/video/video-player";
 import { getLessonAction } from "@/lib/courses/curriculum-actions";
 import { getCourseById } from "@/lib/db/queries/courses";
 

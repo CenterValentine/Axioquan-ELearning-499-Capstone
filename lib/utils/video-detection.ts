@@ -1,5 +1,7 @@
 // /lib/utils/video-detection.ts
 
+import { Lesson } from "@/types/lesson";
+
 /**
  * Detect the type of video source from a URL
  */
@@ -152,3 +154,29 @@ export function getVideoMimeType(videoUrl: string | null): string {
   return "video/mp4";
 }
 
+/**
+ * Find the most recent video lesson at or before the current lesson.
+ * If currentLessonId is not found, we start from the last lesson in the module.
+ */
+export function findNearestVideoLesson(
+  lessons: Lesson[],
+  currentLessonId: string
+): Lesson | null {
+  if (!lessons.length) return null;
+
+  // Where is the "current" lesson in this module?
+  const currentIndex = lessons.findIndex((lesson) => lesson.id === currentLessonId);
+
+  // If not found, assume "current" is the last lesson in the module
+  const startIndex = currentIndex === -1 ? lessons.length - 1 : currentIndex;
+
+  // Walk backwards until we find a video lesson that has a non-null video_url
+  for (let i = startIndex; i >= 0; i--) {
+    const lesson = lessons[i];
+    if (lesson.lesson_type === "video" && lesson.video_url) {
+      return lesson;
+    }
+  }
+
+  return null;
+}

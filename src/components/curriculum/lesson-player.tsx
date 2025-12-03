@@ -3,11 +3,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Play, FileText, Download, Captions, FileText as TranscriptIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, FileText as TranscriptIcon } from 'lucide-react';
 import { Lesson } from '@/lib/db/queries/curriculum';
+import { TextLessonPlayer } from '@/components/curriculum/text';
+import { DocumentLessonPlayer } from '@/components/curriculum/document';
+import { QuizLessonPlayer } from '@/components/curriculum/quiz';
+import { AssignmentLessonPlayer } from '@/components/curriculum/assignment';
+import { LiveSessionLessonPlayer } from '@/components/curriculum/live-session';
+import { AudioLessonPlayer } from '@/components/curriculum/audio';
+import { InteractiveLessonPlayer } from '@/components/curriculum/interactive';
+import { CodeLessonPlayer } from '@/components/curriculum/code';
+import { DiscussionLessonPlayer } from '@/components/curriculum/discussion';
+import { CoreVideoPlayer } from '@/components/curriculum/video';
 
 interface LessonPlayerProps {
   lesson: Lesson;
@@ -29,216 +37,41 @@ export function LessonPlayer({
     onComplete?.();
   };
 
-  const handleDownload = (url: string | null, filename?: string) => {
-    if (!url) return;
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    if (filename) {
-      link.download = filename;
-    }
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const getContentComponent = () => {
     switch (lesson.lesson_type) {
       case 'video':
         return (
           <div className="aspect-video bg-black rounded-lg overflow-hidden">
-            {lesson.video_url ? (
-              <video
-                controls
-                className="w-full h-full"
-                poster={lesson.video_thumbnail || undefined}
-              >
-                <source src={lesson.video_url} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white">
-                <div className="text-center">
-                  <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p>Video content not available</p>
-                </div>
-              </div>
-            )}
+            <CoreVideoPlayer lesson={lesson} />
           </div>
         );
 
       case 'text':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              {lesson.content_html ? (
-                <div 
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: lesson.content_html }}
-                />
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No content available for this lesson</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
+        return <TextLessonPlayer lesson={lesson} />;
 
       case 'document':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <FileText className="h-16 w-16 mx-auto mb-4 text-blue-600" />
-                <h3 className="text-lg font-semibold mb-2">{lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  This lesson contains a document for you to download and study.
-                </p>
-                {lesson.document_url && (
-                  <Button 
-                    onClick={() => handleDownload(lesson.document_url, lesson.title)}
-                    className="flex items-center space-x-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download Document</span>
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <DocumentLessonPlayer lesson={lesson} />;
 
       case 'quiz':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">❓</div>
-                <h3 className="text-lg font-semibold mb-2">Quiz: {lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  Quiz functionality is coming soon!
-                </p>
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                  Under Development
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <QuizLessonPlayer lesson={lesson} />;
 
       case 'assignment':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">📋</div>
-                <h3 className="text-lg font-semibold mb-2">Assignment: {lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  Assignment functionality is coming soon!
-                </p>
-                <Badge variant="outline" className="bg-orange-50 text-orange-700">
-                  Under Development
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <AssignmentLessonPlayer lesson={lesson} />;
 
       case 'live_session':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">🔴</div>
-                <h3 className="text-lg font-semibold mb-2">Live Session: {lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  Live session functionality is coming soon!
-                </p>
-                <Badge variant="outline" className="bg-red-50 text-red-700">
-                  Under Development
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <LiveSessionLessonPlayer lesson={lesson} />;
 
       case 'audio':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">🎧</div>
-                <h3 className="text-lg font-semibold mb-2">Audio Lesson: {lesson.title}</h3>
-                {lesson.audio_url ? (
-                  <audio controls className="w-full max-w-md mx-auto">
-                    <source src={lesson.audio_url} type="audio/mpeg" />
-                    Your browser does not support the audio element.
-                  </audio>
-                ) : (
-                  <p className="text-gray-600">Audio content not available</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <AudioLessonPlayer lesson={lesson} />;
 
       case 'interactive':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">⚡</div>
-                <h3 className="text-lg font-semibold mb-2">Interactive: {lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  Interactive content functionality is coming soon!
-                </p>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                  Under Development
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <InteractiveLessonPlayer lesson={lesson} />;
 
       case 'code':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">💻</div>
-                <h3 className="text-lg font-semibold mb-2">Code Lesson: {lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  Code environment functionality is coming soon!
-                </p>
-                <Badge variant="outline" className="bg-indigo-50 text-indigo-700">
-                  Under Development
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <CodeLessonPlayer lesson={lesson} />;
 
       case 'discussion':
-        return (
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">💬</div>
-                <h3 className="text-lg font-semibold mb-2">Discussion: {lesson.title}</h3>
-                <p className="text-gray-600 mb-4">
-                  Discussion functionality is coming soon!
-                </p>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                  Under Development
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <DiscussionLessonPlayer lesson={lesson} />;
 
       default:
         return (

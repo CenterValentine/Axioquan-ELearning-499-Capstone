@@ -1,9 +1,9 @@
- "use client";
+"use client";
 
 import { X } from "lucide-react";
 import { type Lesson as DbLesson } from "@/lib/db/queries/curriculum";
 import { CourseData, Lesson as UILesson } from "@/types/lesson";
-import { CourseProgressBar1 } from "./course-progress";
+import { CourseProgressBar1 } from "../../courses/course-progress";
 import { CoreVideoPlayer } from "./core-video-player";
 
 interface FullScreenVideoPlayerProps {
@@ -80,3 +80,4 @@ export function FullScreenVideoPlayer({
     </div>
   );
 }
+

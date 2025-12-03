@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import CourseProgress from "./course-progress";
 import { CourseData, Module, Lesson } from "@/types/lesson";
-import { FullScreenVideoPlayer } from "./fullscreen-video-player";
+import { FullScreenVideoPlayer } from "../curriculum/video/fullscreen-video-player";
 
 interface CourseLearningProps {
   courseId: string;
