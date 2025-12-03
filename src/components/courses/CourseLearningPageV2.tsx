@@ -1,34 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
-import {
-  ChevronDown,
-  ChevronUp,
-  Play,
-  Pause,
-  Volume2,
-  Settings,
-  Maximize,
-  Bookmark,
-  CheckCircle2,
-  BookOpen,
-  Expand,
-  Bold,
-  Italic,
-  Underline,
-  List,
-  ListOrdered,
-  Link as LinkIcon,
-  LayoutDashboard,
-  Menu,
-  X,
-} from "lucide-react";
+import { Menu } from "lucide-react";
 import { LessonPlayer } from "../curriculum/lesson-player";
 import { CourseVideo } from "./course-video";
 import { CourseData, Module, Lesson } from "@/types/lesson";
-import { CourseProgressBar1, CourseProgressBar2 } from "./course-progress";
+import { CourseProgressBar2 } from "./course-progress";
 import { FullScreenVideoPlayer } from "../curriculum/video/fullscreen-video-player";
+import { CourseSidebar } from "./course-sidebar";
+import { CourseHeader } from "./course-header";
+import { MobileHeader } from "./mobile-header";
+import { LessonHeader } from "./lesson-header";
+import { LessonContentTabs } from "./lesson-content-tabs";
+import { LessonNavigation } from "./lesson-navigation";
 
 interface CourseLearningProps {
   courseId: string;
@@ -54,9 +38,6 @@ export default function CourseLearningPage({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [bookmarkedTimes, setBookmarkedTimes] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "notes" | "resources"
-  >("overview");
   const [notes, setNotes] = useState("");
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -65,34 +46,6 @@ export default function CourseLearningPage({
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(
     new Set()
   );
-
-  // Helper function to truncate description to 2 sentences
-  const truncateDescription = (
-    text: string,
-    maxSentences: number = 2
-  ): string => {
-    if (!text) return "";
-    // Remove HTML tags for sentence detection
-    const plainText = text.replace(/<[^>]*>/g, "");
-    const sentences = plainText
-      .split(/(?<=[.!?])\s+/)
-      .filter((s) => s.trim().length > 0);
-    if (sentences.length <= maxSentences) return text;
-    return sentences.slice(0, maxSentences).join(" ") + "...";
-  };
-
-  // Determine display description (prefer short, otherwise truncate full)
-  const displayDescription = courseDescription
-    ? courseDescription.length > 200
-      ? truncateDescription(courseDescription)
-      : courseDescription
-    : courseFullDescription
-    ? truncateDescription(courseFullDescription)
-    : "";
-
-  // Full description for tooltip (use full if available, otherwise use display)
-  const fullDescriptionForTooltip =
-    courseFullDescription || courseDescription || "";
 
   // Make courseData stateful so we can update progress reactively
   const [courseData, setCourseData] = useState<CourseData>({
@@ -138,18 +91,7 @@ export default function CourseLearningPage({
     setCurrentLesson(lessonIndex);
     setCurrentTime(0);
     setIsPlaying(false);
-    setIsMobileSidebarOpen(false); // Close mobile sidebar when lesson is selected
-  };
-
-  const handleBookmark = () => {
-    if (!bookmarkedTimes.includes(Math.floor(currentTime))) {
-      setBookmarkedTimes([...bookmarkedTimes, Math.floor(currentTime)]);
-    }
-  };
-
-  // Helper to check if a lesson is completed (checks both state and props)
-  const isLessonCompleted = (lessonId: string) => {
-    return completedLessons.has(lessonId);
+    setIsMobileSidebarOpen(false);
   };
 
   const completeLesson = async () => {
@@ -305,38 +247,12 @@ export default function CourseLearningPage({
     courseData.modules,
   ]);
 
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const currentLessonData = courseData.modules[currentModule].lessons[
     currentLesson
   ] as Lesson;
 
   const currentModuleLessons = courseData.modules[currentModule].lessons as Lesson[];
 
-  // AxioQuan Logo Component
-  // AxioQuan Logo Component - Larger version
-  const AxioQuanLogo = ({
-    size = "default",
-  }: {
-    size?: "default" | "small";
-  }) => (
-    <div
-      className={`flex items-center gap-3 ${
-        size === "small" ? "px-2" : "px-4"
-      }`}
-    >
-      <div className="flex items-center justify-center bg-black rounded-lg p-3 w-8 h-8">
-        <span className="text-white font-bold text-xl">A</span>
-      </div>
-      {size === "default" && (
-        <span className="font-bold text-xl text-foreground">AxioQuan</span>
-      )}
-    </div>
-  );
   // If video is expanded, show full screen video page
   if (isVideoExpanded) {
     return (
@@ -351,215 +267,31 @@ export default function CourseLearningPage({
     );
   }
 
-  // Mobile Sidebar Overlay
-  const MobileSidebar = () => (
-    <>
-      {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Mobile Sidebar */}
-      <div
-        className={`
-        fixed top-0 right-0 h-full w-80 bg-white z-50 transform transition-transform duration-300 ease-in-out md:hidden
-        ${isMobileSidebarOpen ? "translate-x-0" : "translate-x-full"}
-      `}
-      >
-        <div className="p-4 border-b border-border bg-white">
-          <div className="flex items-center justify-between mb-4">
-            <AxioQuanLogo />
-            <button
-              onClick={() => setIsMobileSidebarOpen(false)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition group w-full"
-          >
-            <LayoutDashboard size={20} className="text-primary" />
-            <span className="font-semibold text-foreground">
-              Back to Dashboard
-            </span>
-          </Link>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 h-[calc(100vh-140px)]">
-          {courseData.modules.map((module: Module, moduleIndex: number) => (
-            <div key={module.id} className="space-y-1">
-              <button
-                onClick={() => toggleModule(moduleIndex)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-100 transition group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <BookOpen size={18} className="text-primary flex-shrink-0" />
-                  <div className="text-left">
-                    <p className="font-semibold text-sm text-foreground">
-                      {module.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {module.progress}% complete
-                    </p>
-                  </div>
-                </div>
-                {expandedModules.includes(moduleIndex) ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
-              </button>
-
-              {expandedModules.includes(moduleIndex) && (
-                <div className="space-y-1 ml-4">
-                  {module.lessons.map((lesson: Lesson, lessonIndex: number) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => selectLesson(moduleIndex, lessonIndex)}
-                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition ${
-                        currentModule === moduleIndex &&
-                        currentLesson === lessonIndex
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-gray-100 text-foreground"
-                      }`}
-                    >
-                      {completedLessons.has(lesson.id) ? (
-                        <CheckCircle2
-                          size={16}
-                          className="flex-shrink-0 text-green-500"
-                        />
-                      ) : (
-                        <Play size={16} className="flex-shrink-0" />
-                      )}
-                      <span className="flex-1 text-left truncate">
-                        {lesson.title}
-                      </span>
-                      <span className="text-xs opacity-75">
-                        {formatTime(lesson.duration)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Mobile Sidebar */}
-      <MobileSidebar />
-
-      {/* Desktop Sidebar Navigation - Fixed Position with Dashboard Link */}
-      <div className="hidden md:flex w-80 bg-white/90 backdrop-blur-md border-r border-border flex-col overflow-hidden fixed left-0 top-0 bottom-0 z-30">
-        {/* Logo and Dashboard Header */}
-        <div className="p-4 border-b border-border bg-white/95">
-          <div className="mb-4">
-            <AxioQuanLogo />
-          </div>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition group"
-          >
-            <LayoutDashboard size={20} className="text-primary" />
-            <span className="font-semibold text-foreground">
-              Back to Dashboard
-            </span>
-          </Link>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {/* Modules List */}
-          {courseData.modules.map((module, moduleIndex) => (
-            <div key={module.id} className="space-y-1">
-              <button
-                onClick={() => toggleModule(moduleIndex)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-100 transition group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <BookOpen size={18} className="text-primary flex-shrink-0" />
-                  <div className="text-left">
-                    <p className="font-semibold text-sm text-foreground">
-                      {module.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {module.progress}% complete
-                    </p>
-                  </div>
-                </div>
-                {expandedModules.includes(moduleIndex) ? (
-                  <ChevronUp size={18} />
-                ) : (
-                  <ChevronDown size={18} />
-                )}
-              </button>
-
-              {expandedModules.includes(moduleIndex) && (
-                <div className="space-y-1 ml-4">
-                  {module.lessons.map((lesson, lessonIndex) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => selectLesson(moduleIndex, lessonIndex)}
-                      className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition ${
-                        currentModule === moduleIndex &&
-                        currentLesson === lessonIndex
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-gray-100 text-foreground"
-                      }`}
-                    >
-                      {completedLessons.has(lesson.id) ? (
-                        <CheckCircle2
-                          size={16}
-                          className="flex-shrink-0 text-green-500"
-                        />
-                      ) : (
-                        <Play size={16} className="flex-shrink-0" />
-                      )}
-                      <span className="flex-1 text-left truncate">
-                        {lesson.title}
-                      </span>
-                      <span className="text-xs opacity-75">
-                        {formatTime(lesson.duration)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Course Sidebar (Mobile + Desktop) */}
+      <CourseSidebar
+        courseData={courseData}
+        currentModule={currentModule}
+        currentLesson={currentLesson}
+        expandedModules={expandedModules}
+        completedLessons={completedLessons}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        onToggleModule={toggleModule}
+        onSelectLesson={selectLesson}
+        onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
+      />
 
       {/* Main Content Area - Normal Page Scroll with Sidebar Offset */}
       <div className="flex-1 overflow-y-auto md:ml-80 w-full">
-        {/* Mobile Header */}
-        <div className="md:hidden bg-white border-b border-border p-4 sticky top-0 z-30 w-full">
-          <div className="flex items-center justify-between w-full">
-            <AxioQuanLogo size="small" />
-            <div className="flex-1 ml-3 min-w-0">
-              <h1 className="text-lg font-semibold text-gray-900 truncate">
-                {courseData.title}
-              </h1>
 
-              {/* Current Lesson Info for Mobile */}
-              <div className="mt-1">
-                <p className="text-xs text-muted-foreground truncate">
-                  {courseData.modules[currentModule].title}
-                </p>
-                <p className="font-semibold text-foreground text-sm truncate">
-                  {currentLessonData.title}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        
+        {/* Mobile Header */}
+        <MobileHeader
+          courseData={courseData}
+          currentModule={currentModule}
+          currentLessonData={currentLessonData}
+        />
 
         {/* Floating Course Menu Button */}
         <button
@@ -573,34 +305,11 @@ export default function CourseLearningPage({
 
         <div className="w-full max-w-none">
           {/* Course Title Header - Full Width (Hidden on mobile) */}
-          <div
-            className="bg-white 
-                p-6 md:p-2.5 border-b border-border 
-                w-full hidden md:block"
-          >
-            <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2 line-clamp-2 whitespace-nowrap overflow-hidden text-ellipsis">
-                {courseData.title}
-              </h1>
-              {displayDescription && (
-                <p
-                  className="text-gray-600 text-lg"
-                  title={
-                    fullDescriptionForTooltip !== displayDescription
-                      ? fullDescriptionForTooltip
-                      : undefined
-                  }
-                >
-                  {displayDescription}
-                </p>
-              )}
-              {courseData.instructor && (
-                <p className="text-gray-500 mt-1">
-                  Instructor: {courseData.instructor}
-                </p>
-              )}
-            </div>
-          </div>
+          <CourseHeader
+            courseData={courseData}
+            courseDescription={courseDescription}
+            courseFullDescription={courseFullDescription}
+          />
 
           {/* Video Player Section - Full Width - Optional */}
           <CourseVideo
@@ -611,46 +320,13 @@ export default function CourseLearningPage({
             onExpand={() => setIsVideoExpanded(true)}
           />
 
-          {/* Lesson Header - Full Width but content constrained */}
-          <div className="border-b border-border pt-6 md:pt-8 pb-6 md:pb-8 w-full">
-            <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-              <div className="max-w-4xl md:min-w-[896px] mx-auto">
-                <div className="flex items-start justify-between gap-4 flex-col md:flex-row">
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground mb-1.5">
-                      {courseData.modules[currentModule].title}
-                    </p>
-                    <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                      {currentLessonData.title}
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                      {currentLessonData.duration / 60} minute video lesson
-                    </p>
-                  </div>
-
-                  {/* Mark Complete Button */}
-                  <button
-                    onClick={completeLesson}
-                    disabled={isCurrentLessonCompleted}
-                    className={`px-6 py-3 rounded-lg font-semibold transition whitespace-nowrap w-full md:w-auto flex items-center gap-2 justify-center ${
-                      isCurrentLessonCompleted
-                        ? "bg-green-100 text-green-800 cursor-not-allowed"
-                        : "bg-black text-white hover:opacity-90"
-                    }`}
-                  >
-                    {isCurrentLessonCompleted ? (
-                      <>
-                        <CheckCircle2 size={20} className="text-green-600" />
-                        <span>Completed</span>
-                      </>
-                    ) : (
-                      "Mark Complete"
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Lesson Header */}
+          <LessonHeader
+            moduleTitle={courseData.modules[currentModule].title}
+            lesson={currentLessonData}
+            isCompleted={isCurrentLessonCompleted}
+            onComplete={completeLesson}
+          />
 
           {/* Overall Progress Bar - Full Width - Under video */}
           <CourseProgressBar2
@@ -674,454 +350,22 @@ export default function CourseLearningPage({
               )}
             </div>
 
-            {/* Lesson Content Tabs - Full Width but content constrained */}
-            <div className="border-b border-border w-full">
-              <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-                <div className="flex gap-2 md:gap-4 overflow-x-auto">
-                  <button
-                    onClick={() => setActiveTab("overview")}
-                    className={`px-3 py-2 md:px-4 md:py-3 font-semibold transition whitespace-nowrap ${
-                      activeTab === "overview"
-                        ? "text-primary border-b-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Overview
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("notes")}
-                    className={`px-3 py-2 md:px-4 md:py-3 font-semibold transition whitespace-nowrap ${
-                      activeTab === "notes"
-                        ? "text-primary border-b-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Notes
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("resources")}
-                    className={`px-3 py-2 md:px-4 md:py-3 font-semibold transition whitespace-nowrap ${
-                      activeTab === "resources"
-                        ? "text-primary border-b-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Resources
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Tab Content - ONLY this section is constrained to max-w-4xl */}
-            <div className="w-full">
-              <div className="max-w-4xl mx-auto mt-6 md:mt-8 px-4 md:px-6">
-                {activeTab === "overview" && (
-                  <div className="w-full py-4 md:py-6">
-                    <div className="space-y-6 md:space-y-8 w-full">
-                      {/* About this lesson */}
-                      <div>
-                        <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-foreground">
-                          About this lesson
-                        </h3>
-                        <p className="text-muted-foreground leading-relaxed text-base md:text-lg">
-                          {
-                            courseData.modules[currentModule].lessons[
-                              currentLesson
-                            ].description
-                          }
-                        </p>
-                      </div>
-
-                      {/* Learning Objectives */}
-                      <div className="bg-gray-50 rounded-lg p-4 md:p-6 w-full">
-                        <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-foreground">
-                          Learning Objectives
-                        </h3>
-                        <ul className="space-y-2 md:space-y-3 text-muted-foreground">
-                          <li className="flex items-center gap-3">
-                            <CheckCircle2
-                              size={18}
-                              className="text-green-500 flex-shrink-0"
-                            />
-                            Understand JSX syntax and its relationship with
-                            JavaScript
-                          </li>
-                          <li className="flex items-center gap-3">
-                            <CheckCircle2
-                              size={18}
-                              className="text-green-500 flex-shrink-0"
-                            />
-                            Create and use React components effectively
-                          </li>
-                          <li className="flex items-center gap-3">
-                            <CheckCircle2
-                              size={18}
-                              className="text-green-500 flex-shrink-0"
-                            />
-                            Pass data between components using props
-                          </li>
-                          <li className="flex items-center gap-3">
-                            <CheckCircle2
-                              size={18}
-                              className="text-green-500 flex-shrink-0"
-                            />
-                            Apply React best practices in real-world scenarios
-                          </li>
-                        </ul>
-                      </div>
-                      {courseData.modules[currentModule].lessons[currentLesson]
-                        .lesson_type !== "video" && (
-                        <LessonPlayer
-                          lesson={
-                            courseData.modules[currentModule].lessons[
-                              currentLesson
-                            ]
-                          }
-                        />
-                      )}
-
-                      {/* Bookmarks */}
-                      <div className="w-full">
-                        <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-foreground">
-                          Bookmarks
-                        </h3>
-                        <div className="space-y-2 md:space-y-3 w-full">
-                          {bookmarkedTimes.length > 0 ? (
-                            bookmarkedTimes.map((time, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setCurrentTime(time)}
-                                className="w-full text-left px-3 py-2 md:px-4 md:py-3 rounded-lg bg-muted hover:bg-muted/80 transition flex items-center gap-3"
-                              >
-                                <Bookmark
-                                  size={14}
-                                  className="text-blue-500 flex-shrink-0"
-                                />
-                                <div>
-                                  <span className="font-semibold text-foreground text-sm md:text-base">
-                                    {formatTime(time)}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground ml-2">
-                                    Bookmark {index + 1}
-                                  </span>
-                                </div>
-                              </button>
-                            ))
-                          ) : (
-                            <div className="text-center py-6 md:py-8 bg-gray-50 rounded-lg w-full">
-                              <Bookmark
-                                size={36}
-                                className="text-gray-400 mx-auto mb-2 md:mb-3"
-                              />
-                              <p className="text-muted-foreground">
-                                No bookmarks yet
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Add bookmarks while watching the video!
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "notes" && (
-                  <div className="w-full py-4 md:py-6">
-                    <div className="space-y-4 md:space-y-6 w-full">
-                      <h3 className="text-xl md:text-2xl font-bold text-foreground">
-                        Your Notes
-                      </h3>
-
-                      {/* Text Formatting Toolbar */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 md:p-3 flex flex-wrap gap-1 md:gap-2 w-full">
-                        <button
-                          className="p-1 md:p-2 hover:bg-gray-200 rounded transition"
-                          title="Bold"
-                        >
-                          <Bold size={16} />
-                        </button>
-                        <button
-                          className="p-1 md:p-2 hover:bg-gray-200 rounded transition"
-                          title="Italic"
-                        >
-                          <Italic size={16} />
-                        </button>
-                        <button
-                          className="p-1 md:p-2 hover:bg-gray-200 rounded transition"
-                          title="Underline"
-                        >
-                          <Underline size={16} />
-                        </button>
-                        <div className="w-px bg-gray-300 h-4 md:h-6"></div>
-                        <button
-                          className="p-1 md:p-2 hover:bg-gray-200 rounded transition"
-                          title="Bullet List"
-                        >
-                          <List size={16} />
-                        </button>
-                        <button
-                          className="p-1 md:p-2 hover:bg-gray-200 rounded transition"
-                          title="Numbered List"
-                        >
-                          <ListOrdered size={16} />
-                        </button>
-                        <button
-                          className="p-1 md:p-2 hover:bg-gray-200 rounded transition"
-                          title="Insert Link"
-                        >
-                          <LinkIcon size={16} />
-                        </button>
-                      </div>
-
-                      {/* Large Text Area - Full Width */}
-                      <textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Start typing your notes here... You can format your text using the toolbar above. Write down key concepts, questions, code snippets, or insights from this lesson."
-                        className="w-full min-h-[300px] md:min-h-[400px] p-4 md:p-6 rounded-lg border border-gray-300 bg-white text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-base md:text-lg leading-relaxed resize-y"
-                      />
-
-                      <div className="flex justify-between items-center text-xs md:text-sm text-muted-foreground w-full flex-col md:flex-row gap-2 md:gap-0">
-                        <span>
-                          Your notes are automatically saved as you type
-                        </span>
-                        <span>
-                          {notes.length} characters •{" "}
-                          {
-                            notes.split(/\s+/).filter((word) => word.length > 0)
-                              .length
-                          }{" "}
-                          words
-                        </span>
-                      </div>
-
-                      {/* Quick Formatting Tips */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4 w-full">
-                        <h4 className="font-semibold text-blue-900 mb-2">
-                          Formatting Tips
-                        </h4>
-                        <ul className="text-blue-800 text-xs md:text-sm space-y-1">
-                          <li>
-                            • Use <strong>**bold**</strong> for important
-                            concepts
-                          </li>
-                          <li>
-                            • Use <em>*italic*</em> for emphasis
-                          </li>
-                          <li>
-                            • Start lines with <code>-</code> for bullet points
-                          </li>
-                          <li>
-                            • Start lines with <code>1.</code> for numbered
-                            lists
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "resources" && (
-                  <div className="w-full py-4 md:py-6">
-                    <div className="space-y-6 md:space-y-8 w-full">
-                      <h3 className="text-xl md:text-2xl font-bold text-foreground">
-                        Lesson Resources
-                      </h3>
-
-                      <div className="grid gap-4 md:gap-6 w-full">
-                        {/* Downloadable Materials */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg md:rounded-xl p-4 md:p-6 w-full">
-                          <h4 className="font-bold text-blue-900 text-lg md:text-xl mb-3 md:mb-4">
-                            📚 Downloadable Materials
-                          </h4>
-                          <div className="space-y-3 md:space-y-4 w-full">
-                            <div className="bg-white rounded-lg p-3 md:p-4 border border-blue-100 hover:border-blue-300 transition cursor-pointer w-full">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                  <span className="text-blue-600 font-bold text-sm md:text-base">
-                                    PDF
-                                  </span>
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold text-blue-900 text-sm md:text-base">
-                                    Lesson Slides
-                                  </p>
-                                  <p className="text-blue-700 text-xs md:text-sm">
-                                    Complete presentation slides
-                                  </p>
-                                </div>
-                              </div>
-                              <button className="w-full mt-2 md:mt-3 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm md:text-base">
-                                Download (2.4 MB)
-                              </button>
-                            </div>
-
-                            <div className="bg-white rounded-lg p-3 md:p-4 border border-blue-100 hover:border-blue-300 transition cursor-pointer w-full">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 md:w-10 md:h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                  <span className="text-green-600 font-bold text-sm md:text-base">
-                                    ZIP
-                                  </span>
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold text-blue-900 text-sm md:text-base">
-                                    Starter Code
-                                  </p>
-                                  <p className="text-blue-700 text-xs md:text-sm">
-                                    Project files and examples
-                                  </p>
-                                </div>
-                              </div>
-                              <button className="w-full mt-2 md:mt-3 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium text-sm md:text-base">
-                                Download (5.1 MB)
-                              </button>
-                            </div>
-
-                            <div className="bg-white rounded-lg p-3 md:p-4 border border-blue-100 hover:border-blue-300 transition cursor-pointer w-full">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                  <span className="text-purple-600 font-bold text-sm md:text-base">
-                                    DOC
-                                  </span>
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold text-blue-900 text-sm md:text-base">
-                                    Exercise Files
-                                  </p>
-                                  <p className="text-blue-700 text-xs md:text-sm">
-                                    Practice exercises and solutions
-                                  </p>
-                                </div>
-                              </div>
-                              <button className="w-full mt-2 md:mt-3 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition font-medium text-sm md:text-base">
-                                Download (1.2 MB)
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Useful Links */}
-                        <div className="bg-green-50 border border-green-200 rounded-lg md:rounded-xl p-4 md:p-6 w-full">
-                          <h4 className="font-bold text-green-900 text-lg md:text-xl mb-3 md:mb-4">
-                            🔗 Useful Links & References
-                          </h4>
-                          <div className="space-y-3 md:space-y-4 w-full">
-                            <a
-                              href="#"
-                              className="block bg-white rounded-lg p-3 md:p-4 border border-green-100 hover:border-green-300 transition cursor-pointer hover:shadow-md w-full"
-                            >
-                              <p className="font-semibold text-green-900 text-sm md:text-base">
-                                React Official Documentation
-                              </p>
-                              <p className="text-green-700 text-xs md:text-sm">
-                                Complete React API reference and guides
-                              </p>
-                              <span className="text-green-600 text-xs mt-1 md:mt-2 block">
-                                reactjs.org
-                              </span>
-                            </a>
-
-                            <a
-                              href="#"
-                              className="block bg-white rounded-lg p-3 md:p-4 border border-green-100 hover:border-green-300 transition cursor-pointer hover:shadow-md w-full"
-                            >
-                              <p className="font-semibold text-green-900 text-sm md:text-base">
-                                JSX Syntax Guide
-                              </p>
-                              <p className="text-green-700 text-xs md:text-sm">
-                                Deep dive into JSX syntax and features
-                              </p>
-                              <span className="text-green-600 text-xs mt-1 md:mt-2 block">
-                                react.dev
-                              </span>
-                            </a>
-
-                            <a
-                              href="#"
-                              className="block bg-white rounded-lg p-3 md:p-4 border border-green-100 hover:border-green-300 transition cursor-pointer hover:shadow-md w-full"
-                            >
-                              <p className="font-semibold text-green-900 text-sm md:text-base">
-                                Component Best Practices
-                              </p>
-                              <p className="text-green-700 text-xs md:text-sm">
-                                Industry standards and patterns
-                              </p>
-                              <span className="text-green-600 text-xs mt-1 md:mt-2 block">
-                                patterns.react.dev
-                              </span>
-                            </a>
-
-                            <a
-                              href="#"
-                              className="block bg-white rounded-lg p-3 md:p-4 border border-green-100 hover:border-green-300 transition cursor-pointer hover:shadow-md w-full"
-                            >
-                              <p className="font-semibold text-green-900 text-sm md:text-base">
-                                Interactive Examples
-                              </p>
-                              <p className="text-green-700 text-xs md:text-sm">
-                                Live code examples and playground
-                              </p>
-                              <span className="text-green-600 text-xs mt-1 md:mt-2 block">
-                                codesandbox.io
-                              </span>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Lesson Content Tabs */}
+            <LessonContentTabs
+              lesson={currentLessonData}
+              bookmarkedTimes={bookmarkedTimes}
+              onBookmarkClick={setCurrentTime}
+              notes={notes}
+              onNotesChange={setNotes}
+            />
 
             {/* Navigation Buttons - Full Width but content constrained */}
-            <div className="border-t border-border w-full mt-6 md:mt-8">
-              <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-                <div className="flex gap-3 md:gap-4 py-6 md:py-8 flex-col md:flex-row">
-                  <button
-                    onClick={() => {
-                      if (currentLesson > 0)
-                        selectLesson(currentModule, currentLesson - 1);
-                      else if (currentModule > 0)
-                        selectLesson(
-                          currentModule - 1,
-                          courseData.modules[currentModule - 1].lessons.length -
-                            1
-                        );
-                    }}
-                    disabled={currentModule === 0 && currentLesson === 0}
-                    className="px-6 py-3 md:px-8 md:py-3 rounded-lg border border-border hover:bg-muted transition disabled:opacity-50 font-semibold text-sm md:text-base"
-                  >
-                    Previous Lesson
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (
-                        currentLesson <
-                        courseData.modules[currentModule].lessons.length - 1
-                      ) {
-                        selectLesson(currentModule, currentLesson + 1);
-                      } else if (
-                        currentModule <
-                        courseData.modules.length - 1
-                      ) {
-                        selectLesson(currentModule + 1, 0);
-                      }
-                    }}
-                    disabled={
-                      currentModule === courseData.modules.length - 1 &&
-                      currentLesson ===
-                        courseData.modules[currentModule].lessons.length - 1
-                    }
-                    className="px-6 py-3 md:px-8 md:py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition disabled:opacity-50 font-semibold text-sm md:text-base"
-                  >
-                    Next Lesson
-                  </button>
-                </div>
-              </div>
-            </div>
+            <LessonNavigation
+              courseData={courseData}
+              currentModule={currentModule}
+              currentLesson={currentLesson}
+              onSelectLesson={selectLesson}
+            />
           </div>
         </div>
       </div>
