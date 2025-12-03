@@ -1,6 +1,6 @@
 // /lib/db/queries/enrollments.ts
 
-import { sql } from '../index';
+import { sql } from "../index";
 
 /**
  * Get all active course enrollments for a user, joined with course and category data.
@@ -65,7 +65,7 @@ export async function getUserEnrolledCourses(userId: string): Promise<any[]> {
 
     return rows as any[];
   } catch (error) {
-    console.error('❌ Error fetching user enrolled courses:', error);
+    console.error("❌ Error fetching user enrolled courses:", error);
     return [];
   }
 }
@@ -85,7 +85,7 @@ export async function getEnrollmentByUserAndCourse(
     `;
     return rows[0] || null;
   } catch (error) {
-    console.error('❌ Error fetching enrollment:', error);
+    console.error("❌ Error fetching enrollment:", error);
     return null;
   }
 }
@@ -97,19 +97,29 @@ export async function createEnrollment(
   userId: string,
   courseId: string,
   priceCents: number,
-  accessType: string = 'open'
-): Promise<{ success: boolean; message: string; enrollment?: any; errors?: string[] }> {
+  accessType: string = "open"
+): Promise<{
+  success: boolean;
+  message: string;
+  enrollment?: any;
+  errors?: string[];
+}> {
   try {
-    console.log('📝 createEnrollment called:', { userId, courseId, priceCents, accessType });
-    
+    console.log("📝 createEnrollment called:", {
+      userId,
+      courseId,
+      priceCents,
+      accessType,
+    });
+
     // Check if active enrollment already exists
     const existing = await getEnrollmentByUserAndCourse(userId, courseId);
     if (existing) {
-      console.log('⚠️ Active enrollment already exists');
+      console.log("⚠️ Active enrollment already exists");
       return {
         success: false,
-        message: 'Already enrolled',
-        errors: ['You are already enrolled in this course']
+        message: "Already enrolled",
+        errors: ["You are already enrolled in this course"],
       };
     }
 
@@ -127,14 +137,14 @@ export async function createEnrollment(
         SET status = 'active',
             enrolled_at = NOW(),
             enrolled_price_cents = ${priceCents},
-            access_type = ${accessType || 'open'},
+            access_type = ${accessType || "open"},
             last_activity_at = NOW()
         WHERE user_id = ${userId} AND course_id = ${courseId} AND status = 'cancelled'
         RETURNING *
       `;
 
       if (reactivated.length === 0) {
-        console.error('❌ Failed to reactivate cancelled enrollment');
+        console.error("❌ Failed to reactivate cancelled enrollment");
         // Fall through to create new enrollment
       } else {
         // Update course enrolled_students_count
@@ -146,8 +156,8 @@ export async function createEnrollment(
 
         return {
           success: true,
-          message: 'Successfully re-enrolled in course',
-          enrollment: reactivated[0]
+          message: "Successfully re-enrolled in course",
+          enrollment: reactivated[0],
         };
       }
     }
@@ -156,16 +166,16 @@ export async function createEnrollment(
     const course = await sql`
       SELECT total_lessons, access_type FROM courses WHERE id = ${courseId} LIMIT 1
     `;
-    
+
     if (course.length === 0) {
       return {
         success: false,
-        message: 'Course not found',
-        errors: ['Course not found']
+        message: "Course not found",
+        errors: ["Course not found"],
       };
     }
 
-    console.log('📝 Creating new enrollment...');
+    console.log("📝 Creating new enrollment...");
     const newEnrollment = await sql`
       INSERT INTO enrollments (
         user_id,
@@ -181,7 +191,7 @@ export async function createEnrollment(
         ${userId},
         ${courseId},
         ${priceCents},
-        ${accessType || course[0].access_type || 'open'},
+        ${accessType || course[0].access_type || "open"},
         'web',
         'active',
         0,
@@ -191,14 +201,17 @@ export async function createEnrollment(
       RETURNING *
     `;
 
-    console.log('✅ Enrollment created:', newEnrollment.length > 0 ? 'Success' : 'Failed');
+    console.log(
+      "✅ Enrollment created:",
+      newEnrollment.length > 0 ? "Success" : "Failed"
+    );
 
     if (!newEnrollment || newEnrollment.length === 0) {
-      console.error('❌ Enrollment insert returned no rows');
+      console.error("❌ Enrollment insert returned no rows");
       return {
         success: false,
-        message: 'Failed to create enrollment',
-        errors: ['Database error: Enrollment was not created']
+        message: "Failed to create enrollment",
+        errors: ["Database error: Enrollment was not created"],
       };
     }
 
@@ -209,23 +222,23 @@ export async function createEnrollment(
       WHERE id = ${courseId}
     `;
 
-    console.log('✅ Enrollment process completed successfully');
+    console.log("✅ Enrollment process completed successfully");
     return {
       success: true,
-      message: 'Successfully enrolled in course',
-      enrollment: newEnrollment[0]
+      message: "Successfully enrolled in course",
+      enrollment: newEnrollment[0],
     };
   } catch (error: any) {
-    console.error('❌ Error creating enrollment:', error);
-    console.error('❌ Error details:', {
+    console.error("❌ Error creating enrollment:", error);
+    console.error("❌ Error details:", {
       message: error?.message,
       stack: error?.stack,
-      name: error?.name
+      name: error?.name,
     });
     return {
       success: false,
-      message: 'Failed to enroll in course',
-      errors: [error?.message || 'An unexpected error occurred']
+      message: "Failed to enroll in course",
+      errors: [error?.message || "An unexpected error occurred"],
     };
   }
 }
@@ -249,8 +262,8 @@ export async function cancelEnrollment(
     if (result.length === 0) {
       return {
         success: false,
-        message: 'Enrollment not found',
-        errors: ['Enrollment not found']
+        message: "Enrollment not found",
+        errors: ["Enrollment not found"],
       };
     }
 
@@ -263,16 +276,372 @@ export async function cancelEnrollment(
 
     return {
       success: true,
-      message: 'Successfully unenrolled from course'
+      message: "Successfully unenrolled from course",
     };
   } catch (error: any) {
-    console.error('❌ Error cancelling enrollment:', error);
+    console.error("❌ Error cancelling enrollment:", error);
     return {
       success: false,
-      message: 'Failed to unenroll from course',
-      errors: [error.message || 'An unexpected error occurred']
+      message: "Failed to unenroll from course",
+      errors: [error.message || "An unexpected error occurred"],
     };
   }
 }
 
+/**
+ * Get lesson progress for a user in a course
+ * Uses the existing user_progress table
+ * Returns a map of lesson_id -> { completed, watched }
+ */
+export async function getLessonProgress(
+  userId: string,
+  courseId: string
+): Promise<
+  Map<
+    string,
+    { completed: boolean; watched: number; completed_at?: Date | string }
+  >
+> {
+  try {
+    // Verify enrollment exists
+    const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+    if (!enrollment) {
+      return new Map();
+    }
 
+    // Get progress from user_progress table, filtered by lessons in this course
+    // Note: lesson_id is UUID in the actual table
+    try {
+      const progressRows = await sql`
+        SELECT 
+          up.lesson_id,
+          up.is_completed as completed,
+          up.completed_at,
+          up.last_accessed_at,
+          up.time_spent as watched
+        FROM user_progress up
+        INNER JOIN lessons l ON up.lesson_id = l.id
+        WHERE up.user_id = ${userId}::uuid
+          AND l.course_id = ${courseId}::uuid
+      `;
+
+      const progressMap = new Map<
+        string,
+        { completed: boolean; watched: number; completed_at?: Date | string }
+      >();
+
+      for (const row of progressRows) {
+        // The actual table has time_spent (integer) for watched time
+        progressMap.set(row.lesson_id.toString(), {
+          completed: row.completed || false,
+          watched: row.watched || 0, // Use time_spent from the table
+          completed_at: row.completed_at,
+        });
+      }
+
+      return progressMap;
+    } catch (error: any) {
+      // Table might not exist yet, return empty map
+      if (
+        error.message?.includes("does not exist") ||
+        error.message?.includes("relation")
+      ) {
+        return new Map();
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error("❌ Error fetching lesson progress:", error);
+    return new Map();
+  }
+}
+
+/**
+ * Mark lesson as complete and update enrollment progress
+ */
+export async function completeLesson(
+  userId: string,
+  courseId: string,
+  lessonId: string
+): Promise<{
+  success: boolean;
+  message: string;
+  progress?: {
+    moduleProgress: number;
+    overallProgress: number;
+    completedLessons: number;
+  };
+  errors?: string[];
+}> {
+  try {
+    // Get enrollment
+    const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+    if (!enrollment) {
+      return {
+        success: false,
+        message: "Enrollment not found",
+        errors: ["You are not enrolled in this course"],
+      };
+    }
+
+    // Get total lessons count for the course
+    const courseData = await sql`
+      SELECT total_lessons FROM courses WHERE id = ${courseId} LIMIT 1
+    `;
+    const totalLessons = courseData[0]?.total_lessons || 0;
+
+    // Get module_id for this lesson
+    const lessonData = await sql`
+      SELECT module_id FROM lessons WHERE id = ${lessonId} LIMIT 1
+    `;
+    if (lessonData.length === 0) {
+      return {
+        success: false,
+        message: "Lesson not found",
+        errors: ["Lesson not found"],
+      };
+    }
+    const moduleId = lessonData[0].module_id;
+
+    // Insert or update user_progress record
+    // Note: The actual table has UUID for id and lesson_id, and requires course_id and enrollment_id
+    try {
+      // Check if record already exists
+      const existing = await sql`
+        SELECT id FROM user_progress
+        WHERE user_id = ${userId}::uuid AND lesson_id = ${lessonId}::uuid
+        LIMIT 1
+      `;
+
+      if (existing.length > 0) {
+        // Update existing record
+        await sql`
+          UPDATE user_progress
+          SET 
+            is_completed = true,
+            completed_at = COALESCE(completed_at, NOW()),
+            last_accessed_at = NOW()
+          WHERE user_id = ${userId}::uuid AND lesson_id = ${lessonId}::uuid
+        `;
+      } else {
+        // Insert new record
+        // The actual table requires: user_id, lesson_id, course_id, enrollment_id
+        // id is UUID and auto-generated, so we don't include it
+        await sql`
+          INSERT INTO user_progress (
+            user_id,
+            lesson_id,
+            course_id,
+            enrollment_id,
+            is_completed,
+            completed_at,
+            last_accessed_at
+          ) VALUES (
+            ${userId}::uuid,
+            ${lessonId}::uuid,
+            ${courseId}::uuid,
+            ${enrollment.id}::uuid,
+            true,
+            NOW(),
+            NOW()
+          )
+        `;
+      }
+    } catch (error: any) {
+      console.error("Error inserting/updating user_progress:", error);
+
+      // If table doesn't exist, return helpful error
+      if (
+        error.message?.includes("does not exist") ||
+        error.message?.includes("relation") ||
+        error.code === "42P01"
+      ) {
+        return {
+          success: false,
+          message: "Database table not found",
+          errors: ["Please contact support. Database migration required."],
+        };
+      }
+
+      // Return a more descriptive error
+      return {
+        success: false,
+        message: "Failed to update lesson progress",
+        errors: [error.message || error.detail || "Database error occurred"],
+      };
+    }
+
+    // Count completed lessons for this course using user_progress
+    const completedCountResult = await sql`
+        SELECT COUNT(*) as count
+        FROM user_progress up
+        INNER JOIN lessons l ON up.lesson_id = l.id
+        WHERE up.user_id = ${userId}::uuid
+          AND l.course_id = ${courseId}::uuid
+          AND up.is_completed = true
+      `;
+    const completedLessons = parseInt(
+      completedCountResult[0]?.count || "0",
+      10
+    );
+
+    // Calculate overall progress percentage
+    const overallProgress =
+      totalLessons > 0
+        ? Math.round((completedLessons / totalLessons) * 100)
+        : 0;
+
+    // Calculate module progress
+    const moduleLessonsResult = await sql`
+      SELECT COUNT(*) as total
+      FROM lessons
+      WHERE module_id = ${moduleId} AND is_published = true
+    `;
+    const moduleTotalLessons = parseInt(
+      moduleLessonsResult[0]?.total || "0",
+      10
+    );
+
+    const moduleCompletedResult = await sql`
+        SELECT COUNT(*) as count
+        FROM user_progress up
+        INNER JOIN lessons l ON up.lesson_id = l.id
+        WHERE up.user_id = ${userId}::uuid
+          AND up.is_completed = true
+          AND l.module_id = ${moduleId}::uuid
+          AND l.is_published = true
+      `;
+    const moduleCompletedLessons = parseInt(
+      moduleCompletedResult[0]?.count || "0",
+      10
+    );
+
+    const moduleProgress =
+      moduleTotalLessons > 0
+        ? Math.round((moduleCompletedLessons / moduleTotalLessons) * 100)
+        : 0;
+
+    // Update enrollment progress
+    await sql`
+      UPDATE enrollments
+      SET 
+        completed_lessons = ${completedLessons},
+        progress_percentage = ${overallProgress},
+        last_activity_at = NOW()
+      WHERE id = ${enrollment.id}
+    `;
+
+    return {
+      success: true,
+      message: "Lesson marked as complete",
+      progress: {
+        moduleProgress,
+        overallProgress,
+        completedLessons,
+      },
+    };
+  } catch (error: any) {
+    console.error("❌ Error completing lesson:", error);
+    console.error("❌ Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      code: error?.code,
+    });
+    return {
+      success: false,
+      message: "Failed to complete lesson",
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}
+
+/**
+ * Update lesson watched time
+ * Note: user_progress table doesn't have watched_seconds field
+ * This function updates last_accessed_at to track access
+ * If you need watched_seconds, you'll need to add that column to user_progress table
+ */
+export async function updateLessonWatchedTime(
+  userId: string,
+  courseId: string,
+  lessonId: string,
+  watchedSeconds: number
+): Promise<{ success: boolean; errors?: string[] }> {
+  try {
+    // Get enrollment to verify user is enrolled
+    const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+    if (!enrollment) {
+      return {
+        success: false,
+        errors: ["You are not enrolled in this course"],
+      };
+    }
+
+    try {
+      // Update last_accessed_at in user_progress
+      // The actual table has time_spent (integer) for watched time
+      // We need enrollment_id and course_id for inserts
+
+      // Get enrollment to get enrollment_id
+      const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+      if (!enrollment) {
+        return { success: true }; // Return success to avoid breaking the UI
+      }
+
+      // Check if record exists first
+      const existing = await sql`
+        SELECT id FROM user_progress
+        WHERE user_id = ${userId}::uuid AND lesson_id = ${lessonId}::uuid
+        LIMIT 1
+      `;
+
+      if (existing.length > 0) {
+        // Update existing record - update time_spent and last_accessed_at
+        await sql`
+          UPDATE user_progress
+          SET 
+            last_accessed_at = NOW(),
+            time_spent = COALESCE(time_spent, 0) + ${watchedSeconds}
+          WHERE user_id = ${userId}::uuid AND lesson_id = ${lessonId}::uuid
+        `;
+      } else {
+        // Insert new record (just for tracking access, not completion)
+        await sql`
+          INSERT INTO user_progress (
+            user_id,
+            lesson_id,
+            course_id,
+            enrollment_id,
+            last_accessed_at,
+            time_spent
+          ) VALUES (
+            ${userId}::uuid,
+            ${lessonId}::uuid,
+            ${courseId}::uuid,
+            ${enrollment.id}::uuid,
+            NOW(),
+            ${watchedSeconds}
+          )
+        `;
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      // If table doesn't exist, silently fail
+      if (
+        error.message?.includes("does not exist") ||
+        error.message?.includes("relation")
+      ) {
+        return { success: true }; // Return success to avoid breaking the UI
+      }
+      throw error;
+    }
+  } catch (error: any) {
+    console.error("Error updating watched time:", error);
+    return {
+      success: false,
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}

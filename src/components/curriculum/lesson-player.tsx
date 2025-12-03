@@ -20,9 +20,6 @@ interface LessonPlayerProps {
 export function LessonPlayer({ 
   lesson, 
   onComplete, 
-  onNext, 
-  onPrevious, 
-  showNavigation = true 
 }: LessonPlayerProps) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -260,55 +257,7 @@ export function LessonPlayer({
   return (
     <div className="space-y-6">
       {/* Lesson Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Badge variant="secondary" className="capitalize">
-                  {lesson.lesson_type}
-                </Badge>
-                {lesson.is_preview && (
-                  <Badge variant="default" className="bg-green-100 text-green-800">
-                    Free Preview
-                  </Badge>
-                )}
-                {lesson.difficulty && lesson.difficulty !== 'beginner' && (
-                  <Badge variant="outline" className="capitalize">
-                    {lesson.difficulty}
-                  </Badge>
-                )}
-              </div>
-              <CardTitle>{lesson.title}</CardTitle>
-              {lesson.description && (
-                <CardDescription className="text-base mt-2">
-                  {lesson.description}
-                </CardDescription>
-              )}
-            </div>
-            
-            {/* Lesson Actions */}
-            <div className="flex items-center space-x-2">
-              {lesson.has_transcript && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowTranscript(!showTranscript)}
-                >
-                  <TranscriptIcon className="h-4 w-4 mr-2" />
-                  Transcript
-                </Button>
-              )}
-              {lesson.has_captions && (
-                <Button variant="outline" size="sm">
-                  <Captions className="h-4 w-4 mr-2" />
-                  Captions
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      
 
       {/* Lesson Content */}
       {getContentComponent()}
@@ -332,40 +281,7 @@ export function LessonPlayer({
         </Card>
       )}
 
-      {/* Completion & Navigation */}
-      {showNavigation && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                {!isCompleted && lesson.requires_completion && (
-                  <Button onClick={handleComplete}>
-                    Mark as Complete
-                  </Button>
-                )}
-                {isCompleted && (
-                  <Badge variant="default" className="bg-green-100 text-green-800">
-                    ✓ Completed
-                  </Badge>
-                )}
-              </div>
-              
-              <div className="flex space-x-2">
-                {onPrevious && (
-                  <Button variant="outline" onClick={onPrevious}>
-                    Previous
-                  </Button>
-                )}
-                {onNext && (
-                  <Button onClick={onNext}>
-                    Next Lesson
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+     
     </div>
   );
 }

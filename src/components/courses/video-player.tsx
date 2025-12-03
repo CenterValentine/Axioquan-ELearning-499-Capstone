@@ -1,52 +1,72 @@
-
 //  /components/courses/video-player.tsx
 
-'use client'
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Play, Pause, Volume2, Settings, Bookmark, ChevronLeft } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import {
+  Play,
+  Pause,
+  Volume2,
+  Settings,
+  Bookmark,
+  ChevronLeft,
+} from "lucide-react";
+import { type Lesson as DbLesson } from "@/lib/db/queries/curriculum";
 
 interface VideoPlayerPageProps {
-  courseId: string
-  lessonId: string
+  courseId: string;
+  lessonId: string;
+  lesson: DbLesson;
+  courseTitle?: string;
+  courseDescription?: string;
 }
 
-export default function VideoPlayerPage({ courseId, lessonId }: VideoPlayerPageProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [playbackSpeed, setPlaybackSpeed] = useState(1)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [bookmarkedTimes, setBookmarkedTimes] = useState<number[]>([])
-
-  // Mock data - replace with API call
-  const lessonData = {
-    id: lessonId,
-    title: "Understanding JSX",
-    duration: 1200,
-    watched: 600,
-    description: "Learn the fundamentals of JSX syntax in React"
-  }
+export default function VideoPlayerPage({
+  courseId,
+  lessonId,
+  lesson,
+  courseTitle,
+  courseDescription,
+}: VideoPlayerPageProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [bookmarkedTimes, setBookmarkedTimes] = useState<number[]>([]);
+  const [watched, setWatched] = useState(0); // TODO: Load from enrollment progress
 
   const handleBookmark = () => {
     if (!bookmarkedTimes.includes(Math.floor(currentTime))) {
-      setBookmarkedTimes([...bookmarkedTimes, Math.floor(currentTime)])
+      setBookmarkedTimes([...bookmarkedTimes, Math.floor(currentTime)]);
     }
-  }
+  };
 
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${minutes}:${secs.toString().padStart(2, "0")}`
-  }
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
 
-  const progressPercentage = (lessonData.watched / lessonData.duration) * 100
+  // Use real lesson data
+  const lessonData = {
+    id: lesson.id,
+    title: lesson.title,
+    duration: lesson.video_duration || 0,
+    watched: watched,
+    description: lesson.description || "",
+  };
+
+  const progressPercentage =
+    lessonData.duration > 0
+      ? (lessonData.watched / lessonData.duration) * 100
+      : 0;
 
   return (
     <div className="flex-1 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-border p-4">
         <div className="max-w-6xl mx-auto flex items-center gap-4">
-          <Link 
+          <Link
             href={`/courses/learn/${courseId}`}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
           >
@@ -54,8 +74,12 @@ export default function VideoPlayerPage({ courseId, lessonId }: VideoPlayerPageP
             Back to Course
           </Link>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">{lessonData.title}</h1>
-            <p className="text-sm text-gray-600">{lessonData.description}</p>
+            <h1 className="text-xl font-bold text-gray-900">
+              {lessonData.title}
+            </h1>
+            {lessonData.description && (
+              <p className="text-sm text-gray-600">{lessonData.description}</p>
+            )}
           </div>
         </div>
       </div>
@@ -65,7 +89,7 @@ export default function VideoPlayerPage({ courseId, lessonId }: VideoPlayerPageP
         <div className="w-full max-w-6xl aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg overflow-hidden relative">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
-              <button 
+              <button
                 onClick={() => setIsPlaying(!isPlaying)}
                 className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/20 backdrop-blur hover:bg-white/30 transition"
               >
@@ -75,14 +99,23 @@ export default function VideoPlayerPage({ courseId, lessonId }: VideoPlayerPageP
                   <Play size={32} className="text-white fill-white" />
                 )}
               </button>
-              <p className="text-white text-lg font-semibold">{lessonData.title}</p>
+              <p className="text-white text-lg font-semibold">
+                {lessonData.title}
+              </p>
             </div>
           </div>
 
           {/* Video Controls */}
           <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
-            <button onClick={() => setIsPlaying(!isPlaying)} className="hover:scale-110 transition">
-              {isPlaying ? <Pause size={24} /> : <Play size={24} className="fill-white" />}
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="hover:scale-110 transition"
+            >
+              {isPlaying ? (
+                <Pause size={24} />
+              ) : (
+                <Play size={24} className="fill-white" />
+              )}
             </button>
             <div className="flex items-center gap-4">
               <select
@@ -96,7 +129,11 @@ export default function VideoPlayerPage({ courseId, lessonId }: VideoPlayerPageP
                 <option value={1.5}>1.5x</option>
                 <option value={2}>2x</option>
               </select>
-              <button onClick={handleBookmark} className="hover:scale-110 transition" title="Bookmark">
+              <button
+                onClick={handleBookmark}
+                className="hover:scale-110 transition"
+                title="Bookmark"
+              >
                 <Bookmark size={20} />
               </button>
               <button className="hover:scale-110 transition">
@@ -126,5 +163,5 @@ export default function VideoPlayerPage({ courseId, lessonId }: VideoPlayerPageP
         </div>
       </div>
     </div>
-  )
+  );
 }

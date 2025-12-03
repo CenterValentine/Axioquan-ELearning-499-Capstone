@@ -24,18 +24,28 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import CourseProgress from "./course-progress";
+import { LessonPlayer } from "../curriculum/lesson-player";
+import { CourseVideo } from "./course-video";
 import { CourseData, Module, Lesson } from "@/types/lesson";
+import { CourseProgressBar1, CourseProgressBar2 } from "./course-progress";
 import { FullScreenVideoPlayer } from "./fullscreen-video-player";
 
 interface CourseLearningProps {
   courseId: string;
   modules: Module[]; // from curriculum.ts - Module interface
+  courseTitle?: string;
+  courseDescription?: string;
+  courseFullDescription?: string;
+  courseInstructor?: string;
 }
 
 export default function CourseLearningPage({
   courseId,
   modules,
+  courseTitle,
+  courseDescription,
+  courseFullDescription,
+  courseInstructor,
 }: CourseLearningProps) {
   const [currentModule, setCurrentModule] = useState(0);
   const [currentLesson, setCurrentLesson] = useState(0);
@@ -56,13 +66,53 @@ export default function CourseLearningPage({
     new Set()
   );
 
-  const courseData: CourseData = {
-    id: courseId,
-    title: "", // Course title not available in props
-    description: "", // Course description not available in props
-    instructor: "", // Instructor name not available in props
-    modules: modules,
+  // Helper function to truncate description to 2 sentences
+  const truncateDescription = (
+    text: string,
+    maxSentences: number = 2
+  ): string => {
+    if (!text) return "";
+    // Remove HTML tags for sentence detection
+    const plainText = text.replace(/<[^>]*>/g, "");
+    const sentences = plainText
+      .split(/(?<=[.!?])\s+/)
+      .filter((s) => s.trim().length > 0);
+    if (sentences.length <= maxSentences) return text;
+    return sentences.slice(0, maxSentences).join(" ") + "...";
   };
+
+  // Determine display description (prefer short, otherwise truncate full)
+  const displayDescription = courseDescription
+    ? courseDescription.length > 200
+      ? truncateDescription(courseDescription)
+      : courseDescription
+    : courseFullDescription
+    ? truncateDescription(courseFullDescription)
+    : "";
+
+  // Full description for tooltip (use full if available, otherwise use display)
+  const fullDescriptionForTooltip =
+    courseFullDescription || courseDescription || "";
+
+  // Make courseData stateful so we can update progress reactively
+  const [courseData, setCourseData] = useState<CourseData>({
+    id: courseId,
+    title: courseTitle || "",
+    description: courseDescription || "",
+    instructor: courseInstructor || "",
+    modules: modules,
+  });
+
+  // Update courseData when modules prop changes
+  useEffect(() => {
+    setCourseData({
+      id: courseId,
+      title: courseTitle || "",
+      description: courseDescription || "",
+      instructor: courseInstructor || "",
+      modules: modules,
+    });
+  }, [courseId, courseTitle, courseDescription, courseInstructor, modules]);
 
   // Initialize completed lessons from props when component loads or modules change
   useEffect(() => {
@@ -102,15 +152,83 @@ export default function CourseLearningPage({
     return completedLessons.has(lessonId);
   };
 
-  const completeLesson = () => {
+  const completeLesson = async () => {
     const lessonId =
       courseData.modules[currentModule].lessons[currentLesson].id;
+
+    // Optimistic update
     setCompletedLessons((prev) => {
       const updated = new Set(prev);
       updated.add(lessonId);
       return updated;
     });
-    // TODO: Call server action to persist completion status to database
+
+    try {
+      // Call API to persist completion
+      const response = await fetch(
+        `/api/courses/${courseId}/lessons/${lessonId}/progress`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        let error;
+        try {
+          const errorText = await response.text();
+          console.error("Raw error response:", errorText);
+          try {
+            error = JSON.parse(errorText);
+          } catch (e) {
+            error = {
+              error:
+                errorText || `HTTP ${response.status}: ${response.statusText}`,
+            };
+          }
+        } catch (e) {
+          error = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        console.error("Failed to complete lesson:", error);
+        console.error("Response status:", response.status);
+        console.error("Response URL:", response.url);
+        // Revert optimistic update on error
+        setCompletedLessons((prev) => {
+          const updated = new Set(prev);
+          updated.delete(lessonId);
+          return updated;
+        });
+        return;
+      }
+
+      const result = await response.json();
+
+      // Update module progress if returned
+      if (result.progress) {
+        setCourseData((prev) => ({
+          ...prev,
+          modules: prev.modules.map((module, idx) => {
+            if (idx === currentModule) {
+              return {
+                ...module,
+                progress: result.progress.moduleProgress,
+              };
+            }
+            return module;
+          }),
+        }));
+      }
+    } catch (error) {
+      console.error("Error completing lesson:", error);
+      // Revert optimistic update on error
+      setCompletedLessons((prev) => {
+        const updated = new Set(prev);
+        updated.delete(lessonId);
+        return updated;
+      });
+    }
   };
 
   // Get current lesson's completed status
@@ -122,6 +240,71 @@ export default function CourseLearningPage({
     return completedLessons.has(lessonId);
   }, [currentModule, currentLesson, completedLessons, courseData.modules]);
 
+  // Calculate module progress reactively from completedLessons
+  const calculateModuleProgress = (module: Module): number => {
+    const completedCount = module.lessons.filter((lesson) =>
+      completedLessons.has(lesson.id)
+    ).length;
+    return module.lessons.length > 0
+      ? Math.round((completedCount / module.lessons.length) * 100)
+      : 0;
+  };
+
+  // Calculate overall progress reactively
+  const overallProgress = useMemo(() => {
+    if (courseData.modules.length === 0) return 0;
+    const totalProgress = courseData.modules.reduce(
+      (sum, module) => sum + calculateModuleProgress(module),
+      0
+    );
+    return Math.round(totalProgress / courseData.modules.length);
+  }, [courseData.modules, completedLessons]);
+
+  // Update module progress when completedLessons changes
+  useEffect(() => {
+    setCourseData((prev) => ({
+      ...prev,
+      modules: prev.modules.map((module) => ({
+        ...module,
+        progress: calculateModuleProgress(module),
+      })),
+    }));
+  }, [completedLessons]);
+
+  // Track watched time for the current lesson
+  useEffect(() => {
+    const currentLessonId =
+      courseData.modules[currentModule]?.lessons[currentLesson]?.id;
+    if (!currentLessonId || !isPlaying || currentTime <= 0) return;
+
+    // Update watched time every 5 seconds
+    const interval = setInterval(async () => {
+      try {
+        await fetch(
+          `/api/courses/${courseId}/lessons/${currentLessonId}/progress`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ watchedSeconds: Math.floor(currentTime) }),
+          }
+        );
+      } catch (error) {
+        console.error("Error updating watched time:", error);
+      }
+    }, 5000); // Update every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [
+    courseId,
+    currentModule,
+    currentLesson,
+    isPlaying,
+    currentTime,
+    courseData.modules,
+  ]);
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -131,12 +314,6 @@ export default function CourseLearningPage({
   const currentLessonData = courseData.modules[currentModule].lessons[
     currentLesson
   ] as Lesson;
-  const progressPercentage =
-    (currentLessonData.watched / currentLessonData.duration) * 100;
-  const overallProgress = Math.round(
-    courseData.modules.reduce((sum, m) => sum + m.progress, 0) /
-      courseData.modules.length
-  );
 
   // AxioQuan Logo Component
   // AxioQuan Logo Component - Larger version
@@ -212,7 +389,7 @@ export default function CourseLearningPage({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 h-[calc(100vh-140px)]">
-          {courseData.modules.map((module, moduleIndex) => (
+          {courseData.modules.map((module: Module, moduleIndex: number) => (
             <div key={module.id} className="space-y-1">
               <button
                 onClick={() => toggleModule(moduleIndex)}
@@ -238,7 +415,7 @@ export default function CourseLearningPage({
 
               {expandedModules.includes(moduleIndex) && (
                 <div className="space-y-1 ml-4">
-                  {module.lessons.map((lesson, lessonIndex) => (
+                  {module.lessons.map((lesson: Lesson, lessonIndex: number) => (
                     <button
                       key={lesson.id}
                       onClick={() => selectLesson(moduleIndex, lessonIndex)}
@@ -296,8 +473,8 @@ export default function CourseLearningPage({
             </span>
           </Link>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {/* Modules List */}
           {courseData.modules.map((module, moduleIndex) => (
             <div key={module.id} className="space-y-1">
               <button
@@ -394,112 +571,67 @@ export default function CourseLearningPage({
 
         <div className="w-full max-w-none">
           {/* Course Title Header - Full Width (Hidden on mobile) */}
-          <div className="bg-white p-6 md:p-8 border-b border-border w-full hidden md:block">
-            <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <div
+            className="bg-white 
+                p-6 md:p-2.5 border-b border-border 
+                w-full hidden md:block"
+          >
+            <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 line-clamp-2 whitespace-nowrap overflow-hidden text-ellipsis">
                 {courseData.title}
               </h1>
-              <p className="text-gray-600 text-lg">{courseData.description}</p>
-              <p className="text-gray-500 mt-1">
-                Instructor: {courseData.instructor}
-              </p>
+              {displayDescription && (
+                <p
+                  className="text-gray-600 text-lg"
+                  title={
+                    fullDescriptionForTooltip !== displayDescription
+                      ? fullDescriptionForTooltip
+                      : undefined
+                  }
+                >
+                  {displayDescription}
+                </p>
+              )}
+              {courseData.instructor && (
+                <p className="text-gray-500 mt-1">
+                  Instructor: {courseData.instructor}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Video Player Section - Full Width */}
-          <div className="bg-white p-4 md:p-8 border-b border-border w-full">
+          {/* Video Player Section - Full Width - Optional */}
+          <CourseVideo
+            courseData={courseData}
+            currentModule={currentModule}
+            currentLesson={currentLesson}
+          />
+
+          {/* Lesson Header - Full Width but content constrained */}
+          <div className="border-b border-border pt-6 md:pt-8 pb-6 md:pb-8 w-full">
             <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-              <div className="bg-black rounded-xl overflow-hidden relative w-full aspect-video max-w-4xl mx-auto shadow-lg">
-                <div
-                  className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20 cursor-pointer"
-                  onClick={() => setIsVideoExpanded(true)}
-                >
-                  <div className="text-center space-y-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 backdrop-blur">
-                      <Play size={32} className="text-white fill-white" />
-                    </div>
-                    <p className="text-white text-sm font-semibold">
-                      Click to expand video
-                    </p>
-                  </div>
-                </div>
-
-                {/* Expand Button */}
-                <button
-                  onClick={() => setIsVideoExpanded(true)}
-                  className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-lg hover:bg-black/70 transition"
-                  title="Expand to full screen"
-                >
-                  <Expand size={20} />
-                </button>
-
-                <CourseProgress
-                  courseData={courseData}
-                  currentModule={currentModule}
-                  currentLesson={currentLesson}
-                />
-              </div>
-
-              {/* Watch on Separate Page Link */}
-              <div className="mt-4 text-center">
-                <Link
-                  href={`/courses/watch/${courseId}/${currentLessonData.id}`}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
-                >
-                  <Play size={16} />
-                  Watch on separate page
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Overall Progress Bar - Full Width */}
-          <div className="bg-white p-4 md:p-6 border-b border-border w-full">
-            <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-gray-900">
-                  Course Progress
-                </span>
-                <span className="text-primary font-bold">
-                  {overallProgress}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-primary rounded-full h-3 transition-all"
-                  style={{ width: `${overallProgress}%` }}
-                />
-              </div>
-              <p className="text-sm text-gray-600 mt-2">
-                You've completed {overallProgress}% of the course. Keep going!
-              </p>
-            </div>
-          </div>
-
-          {/* Lesson Content Section - Full Width */}
-          <div className="bg-white px-4 md:px-8 py-6 md:py-8 w-full">
-            {/* Lesson Header - Full Width but content constrained */}
-            <div className="border-b border-border pb-6 md:pb-8 w-full">
-              <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+              <div className="max-w-4xl md:min-w-[896px] mx-auto">
                 <div className="flex items-start justify-between gap-4 flex-col md:flex-row">
-                  <div className="hidden md:block">
-                    <p className="text-sm text-muted-foreground mb-2">
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1.5">
                       {courseData.modules[currentModule].title}
                     </p>
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
                       {currentLessonData.title}
                     </h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {currentLessonData.duration / 60} minute video lesson
                     </p>
                   </div>
+
+                  {/* Mark Complete Button */}
                   <button
                     onClick={completeLesson}
                     disabled={isCurrentLessonCompleted}
                     className={`px-6 py-3 rounded-lg font-semibold transition whitespace-nowrap w-full md:w-auto flex items-center gap-2 justify-center ${
                       isCurrentLessonCompleted
                         ? "bg-green-100 text-green-800 cursor-not-allowed"
-                        : "bg-primary text-primary-foreground hover:opacity-90"
+                        : "bg-black text-white hover:opacity-90"
                     }`}
                   >
                     {isCurrentLessonCompleted ? (
@@ -513,6 +645,29 @@ export default function CourseLearningPage({
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Overall Progress Bar - Full Width - Under video */}
+          <CourseProgressBar2
+            courseData={courseData}
+            currentModule={currentModule}
+            currentLesson={currentLesson}
+            overallProgress={overallProgress}
+          />
+
+          {/* Lesson Content Section - Full Width */}
+          <div className="bg-white px-4 md:px-8 py-6 md:py-8 w-full">
+            {/* Overall Progress Bar - Full Width */}
+            <div className="pt-6 md:pt-8 w-full">
+              {courseData.modules[currentModule].lessons[currentLesson]
+                .lesson_type !== "video" && (
+                <LessonPlayer
+                  lesson={
+                    courseData.modules[currentModule].lessons[currentLesson]
+                  }
+                />
+              )}
             </div>
 
             {/* Lesson Content Tabs - Full Width but content constrained */}
@@ -559,20 +714,21 @@ export default function CourseLearningPage({
                 {activeTab === "overview" && (
                   <div className="w-full py-4 md:py-6">
                     <div className="space-y-6 md:space-y-8 w-full">
+                      {/* About this lesson */}
                       <div>
                         <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-foreground">
                           About this lesson
                         </h3>
                         <p className="text-muted-foreground leading-relaxed text-base md:text-lg">
-                          In this lesson, we'll explore the fundamentals of
-                          React including JSX syntax, component structure, and
-                          how to work with props. You'll learn practical
-                          patterns that are used in production applications and
-                          understand the philosophy behind React's design
-                          decisions.
+                          {
+                            courseData.modules[currentModule].lessons[
+                              currentLesson
+                            ].description
+                          }
                         </p>
                       </div>
 
+                      {/* Learning Objectives */}
                       <div className="bg-gray-50 rounded-lg p-4 md:p-6 w-full">
                         <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-foreground">
                           Learning Objectives
@@ -609,7 +765,18 @@ export default function CourseLearningPage({
                           </li>
                         </ul>
                       </div>
+                      {courseData.modules[currentModule].lessons[currentLesson]
+                        .lesson_type !== "video" && (
+                        <LessonPlayer
+                          lesson={
+                            courseData.modules[currentModule].lessons[
+                              currentLesson
+                            ]
+                          }
+                        />
+                      )}
 
+                      {/* Bookmarks */}
                       <div className="w-full">
                         <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 text-foreground">
                           Bookmarks
