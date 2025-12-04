@@ -7,6 +7,7 @@ import {
   completeLesson as completeLessonQuery,
   updateLessonWatchedTime as updateWatchedTimeQuery,
   getLessonProgress as getLessonProgressQuery,
+  getUserEnrolledCourses,
 } from "@/lib/db/queries/enrollments";
 
 /**
@@ -92,6 +93,43 @@ export async function getLessonProgressAction(courseId: string): Promise<{
     };
   } catch (error: any) {
     console.error("Error in getLessonProgressAction:", error);
+    return {
+      success: false,
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}
+
+/**
+ * Get updated enrollment progress for all enrolled courses
+ *  map of courseId -> progress percentage
+ */
+export async function getEnrollmentProgressAction(): Promise<{
+  success: boolean;
+  progress?: Map<string, number>;
+  errors?: string[];
+}> {
+  try {
+    const session = await requireAuth();
+    const userId = session.userId;
+
+    const enrolledCourses = await getUserEnrolledCourses(userId);
+
+    const progressMap = new Map<string, number>();
+    enrolledCourses.forEach((course: any) => {
+      const progress = course.progress ?? 0;
+      progressMap.set(
+        String(course.id),
+        Math.max(0, Math.min(100, Math.round(Number(progress) || 0)))
+      );
+    });
+
+    return {
+      success: true,
+      progress: progressMap,
+    };
+  } catch (error: any) {
+    console.error("Error in getEnrollmentProgressAction:", error);
     return {
       success: false,
       errors: [error.message || "An unexpected error occurred"],

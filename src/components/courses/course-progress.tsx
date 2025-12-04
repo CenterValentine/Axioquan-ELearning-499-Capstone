@@ -1,10 +1,16 @@
 import { CourseData, Module, Lesson } from "@/types/lesson";
 
-interface CourseProgressProps {
+interface CourseProgress1Props {
   courseData: CourseData;
   currentModule: number;
   currentLesson: number;
   variant?: "bar1" | "bar2";
+}
+
+interface CourseProgress2Props {
+  courseData: CourseData;
+  overallProgress?: number;
+  variant: "bar1" | "bar2";
 }
 
 const formatTime = (seconds: number) => {
@@ -17,7 +23,8 @@ export function CourseProgressBar1({
   courseData,
   currentModule,
   currentLesson,
-}: CourseProgressProps) {
+  variant = "bar2",
+}: CourseProgress1Props) {
   const currentLessonData = courseData.modules[currentModule].lessons[
     currentLesson
   ] as Lesson;
@@ -42,12 +49,11 @@ export function CourseProgressBar1({
   );
 }
 
-export function CourseProgressBar2({
+export function CourseProgressBar({
   courseData,
-  currentModule,
-  currentLesson,
   overallProgress: providedProgress,
-}: CourseProgressProps & { overallProgress?: number }) {
+  variant = "bar1",
+}: CourseProgress2Props & { overallProgress?: number }) {
   // Use provided progress if available, otherwise calculate from modules
   const overallProgress =
     providedProgress !== undefined
@@ -57,28 +63,46 @@ export function CourseProgressBar2({
             courseData.modules.length
         );
 
-  return (
-    <div className="bg-white py-4 md:py-6 border-b border-border w-full">
-      <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-        <div className="max-w-4xl md:min-w-[896px] mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-semibold text-gray-900">Course Progress</span>
-            <span className="text-2xl font-bold text-gray-900">
-              {overallProgress}%
-            </span>
+  const isBar1 = variant === "bar1";
+
+  // Content that's common to both variants
+  const progressContent = (
+    <>
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-semibold text-gray-900">Course Progress</span>
+        <span className="text-2xl font-bold text-gray-900">
+          {overallProgress}%
+        </span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+        <div
+          className="bg-primary rounded-full h-2.5 transition-all"
+          style={{ width: `${overallProgress}%` }}
+        />
+      </div>
+      <p className="text-sm text-gray-600">
+        You've completed {overallProgress}% of the course. Keep going!
+      </p>
+    </>
+  );
+
+  // For bar1: use max-width constraints
+  if (isBar1) {
+    return (
+      <div className="bg-white py-4 md:py-6 border-b border-border w-full">
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+          <div className="max-w-4xl md:min-w-[896px] mx-auto">
+            {progressContent}
           </div>
-          {/* Progress bar constrained to match video/header width */}
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-            <div
-              className="bg-primary rounded-full h-2.5 transition-all"
-              style={{ width: `${overallProgress}%` }}
-            />
-          </div>
-          <p className="text-sm text-gray-600">
-            You've completed {overallProgress}% of the course. Keep going!
-          </p>
         </div>
       </div>
+    );
+  }
+
+  // For bar2: stay within container, no max-width constraints
+  return (
+    <div className="w-full pt-4">
+      <div className="w-full">{progressContent}</div>
     </div>
   );
 }
@@ -88,15 +112,9 @@ export default function CourseProgress({
   currentModule,
   currentLesson,
   variant = "bar1",
-}: CourseProgressProps) {
+}: CourseProgress1Props) {
   if (variant === "bar2") {
-    return (
-      <CourseProgressBar2
-        courseData={courseData}
-        currentModule={currentModule}
-        currentLesson={currentLesson}
-      />
-    );
+    return <CourseProgressBar courseData={courseData} variant="bar2" />;
   }
 
   return (

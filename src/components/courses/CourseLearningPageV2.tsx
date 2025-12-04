@@ -5,7 +5,7 @@ import { Menu } from "lucide-react";
 import { LessonPlayer } from "../curriculum/lesson-player";
 import { CourseVideo } from "./course-video";
 import { CourseData, Module, Lesson } from "@/types/lesson";
-import { CourseProgressBar2 } from "./course-progress";
+import { CourseProgressBar } from "./course-progress";
 import { FullScreenVideoPlayer } from "../curriculum/video/fullscreen-video-player";
 import { CourseSidebar } from "./course-sidebar";
 import { CourseHeader } from "./course-header";
@@ -306,7 +306,7 @@ export default function CourseLearningPage({
           />
 
           {/* Overall Progress Bar - Full Width - Under video */}
-          <CourseProgressBar2
+          <CourseProgressBar
             courseData={courseData}
             currentModule={currentModule}
             currentLesson={currentLesson}
