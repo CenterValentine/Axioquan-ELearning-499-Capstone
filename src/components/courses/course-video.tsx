@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CourseData, Lesson } from "@/types/lesson";
 import { getVideoType, findNearestVideoLesson } from "@/lib/utils/video-detection";
 import { YouTubeVideoPlayer } from "../curriculum/video/youtube-video-player";
@@ -21,6 +22,8 @@ export function CourseVideo({
   currentModuleLessons,
   onExpand,
 }: CourseVideoProps) {
+  // Manage playback speed for video player
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const videoLesson = findNearestVideoLesson(
     currentModuleLessons,
     currentLesson

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   ChevronDown,
@@ -9,6 +10,7 @@ import {
   BookOpen,
   LayoutDashboard,
   X,
+  Menu,
 } from "lucide-react";
 import { AxioQuanLogo } from "../layout/axioquan-logo";
 import { CourseData, Module, Lesson } from "@/types/lesson";
@@ -23,32 +25,40 @@ interface CourseSidebarProps {
   courseData: CourseData;
   currentModule: number;
   currentLesson: number;
-  expandedModules: number[];
   completedLessons: Set<string>;
-  isMobileSidebarOpen: boolean;
-  onToggleModule: (index: number) => void;
   onSelectLesson: (moduleIndex: number, lessonIndex: number) => void;
-  onCloseMobileSidebar: () => void;
 }
 
 export function CourseSidebar({
   courseData,
   currentModule,
   currentLesson,
-  expandedModules,
   completedLessons,
-  isMobileSidebarOpen,
-  onToggleModule,
   onSelectLesson,
-  onCloseMobileSidebar,
 }: CourseSidebarProps) {
+  // Manage expanded modules state internally
+  const [expandedModules, setExpandedModules] = useState<number[]>([0]);
+  
+  // Manage mobile sidebar open state internally
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const toggleModule = (index: number) => {
+    setExpandedModules((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
+  const handleSelectLesson = (moduleIndex: number, lessonIndex: number) => {
+    onSelectLesson(moduleIndex, lessonIndex);
+    setIsMobileSidebarOpen(false); // Close mobile sidebar when lesson is selected
+  };
   return (
     <>
       {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={onCloseMobileSidebar}
+          onClick={() => setIsMobileSidebarOpen(false)}
         />
       )}
 
@@ -63,7 +73,7 @@ export function CourseSidebar({
           <div className="flex items-center justify-between mb-4">
             <AxioQuanLogo />
             <button
-              onClick={onCloseMobileSidebar}
+              onClick={() => setIsMobileSidebarOpen(false)}
               className="p-2 rounded-lg hover:bg-gray-100 transition"
             >
               <X size={20} />
@@ -84,7 +94,7 @@ export function CourseSidebar({
           {courseData.modules.map((module: Module, moduleIndex: number) => (
             <div key={module.id} className="space-y-1">
               <button
-                onClick={() => onToggleModule(moduleIndex)}
+                onClick={() => toggleModule(moduleIndex)}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-100 transition group"
               >
                 <div className="flex items-center gap-3 flex-1">
@@ -110,10 +120,7 @@ export function CourseSidebar({
                   {module.lessons.map((lesson: Lesson, lessonIndex: number) => (
                     <button
                       key={lesson.id}
-                      onClick={() => {
-                        onSelectLesson(moduleIndex, lessonIndex);
-                        onCloseMobileSidebar();
-                      }}
+                      onClick={() => handleSelectLesson(moduleIndex, lessonIndex)}
                       className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition ${
                         currentModule === moduleIndex &&
                         currentLesson === lessonIndex
@@ -166,7 +173,7 @@ export function CourseSidebar({
           {courseData.modules.map((module, moduleIndex) => (
             <div key={module.id} className="space-y-1">
               <button
-                onClick={() => onToggleModule(moduleIndex)}
+                onClick={() => toggleModule(moduleIndex)}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-100 transition group"
               >
                 <div className="flex items-center gap-3 flex-1">
@@ -192,7 +199,7 @@ export function CourseSidebar({
                   {module.lessons.map((lesson, lessonIndex) => (
                     <button
                       key={lesson.id}
-                      onClick={() => onSelectLesson(moduleIndex, lessonIndex)}
+                      onClick={() => handleSelectLesson(moduleIndex, lessonIndex)}
                       className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition ${
                         currentModule === moduleIndex &&
                         currentLesson === lessonIndex
@@ -222,6 +229,16 @@ export function CourseSidebar({
           ))}
         </div>
       </div>
+
+      {/* Floating Course Menu Button for Mobile */}
+      <button
+        onClick={() => setIsMobileSidebarOpen(true)}
+        className="md:hidden fixed bottom-6 right-6 bg-primary text-primary-foreground p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110 active:scale-95 z-40 animate-bounce"
+        style={{ animationDuration: "2s" }}
+      >
+        <Menu size={24} />
+        <span className="sr-only">Open Course Menu</span>
+      </button>
     </>
   );
 }

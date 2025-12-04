@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bold,
   Italic,
@@ -16,19 +16,24 @@ import { BookmarksSection } from "./bookmarks-section";
 
 interface LessonContentTabsProps {
   lesson: Lesson;
-  bookmarkedTimes: number[];
   onBookmarkClick: (time: number) => void;
-  notes: string;
-  onNotesChange: (notes: string) => void;
 }
 
 export function LessonContentTabs({
   lesson,
-  bookmarkedTimes,
   onBookmarkClick,
-  notes,
-  onNotesChange,
 }: LessonContentTabsProps) {
+  // Manage bookmarked times per lesson
+  const [bookmarkedTimes, setBookmarkedTimes] = useState<number[]>([]);
+  
+  // Manage notes per lesson
+  const [notes, setNotes] = useState("");
+
+  // Reset bookmarks and notes when lesson changes
+  useEffect(() => {
+    setBookmarkedTimes([]);
+    setNotes("");
+  }, [lesson.id]);
   const [activeTab, setActiveTab] = useState<
     "overview" | "notes" | "resources"
   >("overview");
@@ -155,7 +160,7 @@ export function LessonContentTabs({
                 {/* Large Text Area - Full Width */}
                 <textarea
                   value={notes}
-                  onChange={(e) => onNotesChange(e.target.value)}
+                  onChange={(e) => setNotes(e.target.value)}
                   placeholder="Start typing your notes here... You can format your text using the toolbar above. Write down key concepts, questions, code snippets, or insights from this lesson."
                   className="w-full min-h-[300px] md:min-h-[400px] p-4 md:p-6 rounded-lg border border-gray-300 bg-white text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary text-base md:text-lg leading-relaxed resize-y"
                 />

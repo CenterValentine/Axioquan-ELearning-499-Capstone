@@ -33,14 +33,9 @@ export default function CourseLearningPage({
 }: CourseLearningProps) {
   const [currentModule, setCurrentModule] = useState(0);
   const [currentLesson, setCurrentLesson] = useState(0);
-  const [expandedModules, setExpandedModules] = useState<number[]>([0]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
-  const [bookmarkedTimes, setBookmarkedTimes] = useState<number[]>([]);
-  const [notes, setNotes] = useState("");
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Track completed lessons by lesson ID
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(
@@ -80,18 +75,11 @@ export default function CourseLearningPage({
     setCompletedLessons(completed);
   }, [modules]);
 
-  const toggleModule = (index: number) => {
-    setExpandedModules((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
-  };
-
   const selectLesson = (moduleIndex: number, lessonIndex: number) => {
     setCurrentModule(moduleIndex);
     setCurrentLesson(lessonIndex);
     setCurrentTime(0);
     setIsPlaying(false);
-    setIsMobileSidebarOpen(false);
   };
 
   const completeLesson = async () => {
@@ -274,12 +262,8 @@ export default function CourseLearningPage({
         courseData={courseData}
         currentModule={currentModule}
         currentLesson={currentLesson}
-        expandedModules={expandedModules}
         completedLessons={completedLessons}
-        isMobileSidebarOpen={isMobileSidebarOpen}
-        onToggleModule={toggleModule}
         onSelectLesson={selectLesson}
-        onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area - Normal Page Scroll with Sidebar Offset */}
@@ -293,15 +277,8 @@ export default function CourseLearningPage({
           currentLessonData={currentLessonData}
         />
 
-        {/* Floating Course Menu Button */}
-        <button
-          onClick={() => setIsMobileSidebarOpen(true)}
-          className="md:hidden fixed bottom-6 right-6 bg-primary text-primary-foreground p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110 active:scale-95 z-40 animate-bounce"
-          style={{ animationDuration: "2s" }}
-        >
-          <Menu size={24} />
-          <span className="sr-only">Open Course Menu</span>
-        </button>
+        {/* Floating Course Menu Button - Note: Sidebar state is now managed internally */}
+        {/* This button would need to be moved into CourseSidebar or use a callback */}
 
         <div className="w-full max-w-none">
           {/* Course Title Header - Full Width (Hidden on mobile) */}
@@ -353,10 +330,7 @@ export default function CourseLearningPage({
             {/* Lesson Content Tabs */}
             <LessonContentTabs
               lesson={currentLessonData}
-              bookmarkedTimes={bookmarkedTimes}
               onBookmarkClick={setCurrentTime}
-              notes={notes}
-              onNotesChange={setNotes}
             />
 
             {/* Navigation Buttons - Full Width but content constrained */}
