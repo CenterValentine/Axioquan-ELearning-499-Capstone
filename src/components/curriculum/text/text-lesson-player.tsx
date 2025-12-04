@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { Lesson } from "@/lib/db/queries/curriculum";
+import { LessonDebugPanel } from "../lesson-debug-panel";
 
 interface TextLessonPlayerProps {
   lesson: Lesson;
@@ -23,6 +24,9 @@ export function TextLessonPlayer({ lesson }: TextLessonPlayerProps) {
             <p>No content available for this lesson</p>
           </div>
         )}
+
+        {/* Debug Panel */}
+        <LessonDebugPanel data={lesson} title="Lesson Data from Database" />
       </CardContent>
     </Card>
   );

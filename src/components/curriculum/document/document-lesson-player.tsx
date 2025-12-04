@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Download } from "lucide-react";
 import { Lesson } from "@/lib/db/queries/curriculum";
+import { LessonDebugPanel } from "../lesson-debug-panel";
 
 interface DocumentLessonPlayerProps {
   lesson: Lesson;
@@ -44,8 +45,10 @@ export function DocumentLessonPlayer({ lesson }: DocumentLessonPlayerProps) {
             </Button>
           )}
         </div>
+
+        {/* Debug Panel */}
+        <LessonDebugPanel data={lesson} title="Lesson Data from Database" />
       </CardContent>
     </Card>
   );
 }
-
