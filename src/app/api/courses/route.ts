@@ -4,6 +4,7 @@
 import { NextRequest } from 'next/server';
 import { getCoursesAction, createCourseAction } from '@/lib/courses/actions';
 import { requireRole } from '@/lib/auth/utils';
+import { notifyCourseEnrollment } from "@/lib/notifications/actions";
 
 export async function GET(request: NextRequest) {
   try {
