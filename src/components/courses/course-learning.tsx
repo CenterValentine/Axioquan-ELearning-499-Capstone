@@ -443,7 +443,7 @@ export default function CourseLearningPage({
               {/* Watch on Separate Page Link */}
               <div className="mt-4 text-center">
                 <Link
-                  href={`/courses/watch/${courseId}/${currentLessonData.id}`}
+                  href={`/courses/learn/${courseId}/watch?lessonId=${currentLessonData.id}`}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
                 >
                   <Play size={16} />

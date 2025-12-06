@@ -2,15 +2,20 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lesson } from "@/lib/db/queries/curriculum";
+import { CourseData } from "@/types/lesson";
 
 interface AssignmentLessonPlayerProps {
-  lesson: Lesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
 }
 
 export function AssignmentLessonPlayer({
-  lesson,
+  courseData,
+  currentModule,
+  currentLesson,
 }: AssignmentLessonPlayerProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
   return (
     <Card>
       <CardContent className="p-6">
@@ -30,4 +35,3 @@ export function AssignmentLessonPlayer({
     </Card>
   );
 }
-

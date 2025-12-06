@@ -2,13 +2,20 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lesson } from "@/lib/db/queries/curriculum";
+import { CourseData } from "@/types/lesson";
 
 interface CodeLessonPlayerProps {
-  lesson: Lesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
 }
 
-export function CodeLessonPlayer({ lesson }: CodeLessonPlayerProps) {
+export function CodeLessonPlayer({
+  courseData,
+  currentModule,
+  currentLesson,
+}: CodeLessonPlayerProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
   return (
     <Card>
       <CardContent className="p-6">
@@ -28,4 +35,3 @@ export function CodeLessonPlayer({ lesson }: CodeLessonPlayerProps) {
     </Card>
   );
 }
-
