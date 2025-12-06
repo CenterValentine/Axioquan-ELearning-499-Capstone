@@ -17,7 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/courses/file-upload";
 import { Lesson } from "@/lib/db/queries/curriculum";
 import { CodeEnvironment, TestCase } from "@/lib/code/types";
-import { Plus, Trash2 } from "lucide-react";
+import { QuizData, QuizQuestion } from "@/types/quiz";
+import { Plus, Trash2, GripVertical } from "lucide-react";
 
 interface LessonEditorProps {
   lesson: Lesson;
@@ -47,9 +48,16 @@ const difficultyLevels = [
 export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
   // Parse code_environment if it exists
   const initialCodeEnv: CodeEnvironment | null = lesson.code_environment
-    ? (typeof lesson.code_environment === 'string'
-        ? JSON.parse(lesson.code_environment)
-        : lesson.code_environment)
+    ? typeof lesson.code_environment === "string"
+      ? JSON.parse(lesson.code_environment)
+      : lesson.code_environment
+    : null;
+
+  // Parse interactive_content (quiz data) if it exists
+  const initialQuizData: QuizData | null = lesson.interactive_content
+    ? typeof lesson.interactive_content === "string"
+      ? JSON.parse(lesson.interactive_content)
+      : lesson.interactive_content
     : null;
 
   const [formData, setFormData] = useState({
@@ -64,6 +72,9 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
     document_type: lesson.document_type || "",
     content_html: lesson.content_html || "",
     code_environment: initialCodeEnv,
+    interactive_content: initialQuizData,
+    passing_score: lesson.passing_score || 70,
+    requires_passing_grade: lesson.requires_passing_grade || false,
     is_published: lesson.is_published,
     is_preview: lesson.is_preview,
   });
@@ -113,11 +124,14 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
 
     setLoading(true);
     try {
-      // Prepare data for saving - stringify code_environment if it exists
+      // Prepare data for saving - stringify JSON fields if they exist
       const saveData = {
         ...formData,
         code_environment: formData.code_environment
           ? JSON.stringify(formData.code_environment)
+          : null,
+        interactive_content: formData.interactive_content
+          ? JSON.stringify(formData.interactive_content)
           : null,
       };
       await onSave(saveData);
@@ -388,11 +402,534 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
             )}
 
             {formData.lesson_type === "quiz" && (
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-yellow-800">
-                  Quiz functionality coming soon! For now, you can describe the
-                  quiz in the description field.
-                </p>
+              <div className="space-y-4">
+                {/* Quiz Configuration */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Time Limit (minutes)
+                    </label>
+                    <Input
+                      type="number"
+                      value={
+                        formData.interactive_content?.timeLimit
+                          ? Math.floor(
+                              formData.interactive_content.timeLimit / 60
+                            )
+                          : 30
+                      }
+                      onChange={(e) => {
+                        const minutes = parseInt(e.target.value) || 30;
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          timeLimit: minutes * 60,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                          questions:
+                            formData.interactive_content?.questions || [],
+                          allowRetake:
+                            formData.interactive_content?.allowRetake ?? false,
+                          showResultsImmediately:
+                            formData.interactive_content
+                              ?.showResultsImmediately ?? true,
+                        });
+                      }}
+                      min="1"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Passing Score (%)
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.passing_score}
+                      onChange={(e) => {
+                        const score = parseInt(e.target.value) || 70;
+                        handleInputChange("passing_score", score);
+                        handleInputChange("requires_passing_grade", score > 0);
+                      }}
+                      min="0"
+                      max="100"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.interactive_content?.allowRetake ?? false
+                      }
+                      onChange={(e) =>
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          allowRetake: e.target.checked,
+                          timeLimit:
+                            formData.interactive_content?.timeLimit || 1800,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                          questions:
+                            formData.interactive_content?.questions || [],
+                          showResultsImmediately:
+                            formData.interactive_content
+                              ?.showResultsImmediately ?? true,
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <span className="text-sm font-medium">Allow Retake</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.interactive_content?.showResultsImmediately ??
+                        true
+                      }
+                      onChange={(e) =>
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          showResultsImmediately: e.target.checked,
+                          timeLimit:
+                            formData.interactive_content?.timeLimit || 1800,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                          questions:
+                            formData.interactive_content?.questions || [],
+                          allowRetake:
+                            formData.interactive_content?.allowRetake ?? false,
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Show Results Immediately
+                    </span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Quiz Instructions (optional)
+                  </label>
+                  <Textarea
+                    value={formData.interactive_content?.instructions || ""}
+                    onChange={(e) =>
+                      handleInputChange("interactive_content", {
+                        ...formData.interactive_content,
+                        instructions: e.target.value,
+                        timeLimit:
+                          formData.interactive_content?.timeLimit || 1800,
+                        passingScore:
+                          formData.interactive_content?.passingScore || 70,
+                        questions:
+                          formData.interactive_content?.questions || [],
+                      })
+                    }
+                    placeholder="Additional instructions for students taking this quiz..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Questions Builder */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">
+                      Questions
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newQuestion: QuizQuestion = {
+                          id: `q-${Date.now()}`,
+                          type: "multiple-choice",
+                          question: "",
+                          points: 10,
+                          order:
+                            (formData.interactive_content?.questions?.length ||
+                              0) + 1,
+                          options: ["", "", "", ""],
+                          correctAnswer: 0,
+                        };
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          questions: [
+                            ...(formData.interactive_content?.questions || []),
+                            newQuestion,
+                          ],
+                          timeLimit:
+                            formData.interactive_content?.timeLimit || 1800,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                        });
+                      }}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Question
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {(formData.interactive_content?.questions || []).map(
+                      (question, index) => (
+                        <div
+                          key={question.id}
+                          className="p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-900"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">
+                              Question {index + 1}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updated =
+                                    formData.interactive_content?.questions?.filter(
+                                      (_, i) => i !== index
+                                    ) || [];
+                                  // Reorder questions
+                                  updated.forEach((q, i) => {
+                                    q.order = i + 1;
+                                  });
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Question Type
+                            </label>
+                            <select
+                              value={question.type}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...(formData.interactive_content?.questions ||
+                                    []),
+                                ];
+                                updated[index] = {
+                                  ...updated[index],
+                                  type: e.target.value as QuizQuestion["type"],
+                                  // Reset options for non-multiple-choice types
+                                  options:
+                                    e.target.value === "multiple-choice" ||
+                                    e.target.value === "true-false"
+                                      ? updated[index].options ||
+                                        (e.target.value === "true-false"
+                                          ? ["True", "False"]
+                                          : ["", "", "", ""])
+                                      : undefined,
+                                  correctAnswer:
+                                    e.target.value === "true-false"
+                                      ? 0
+                                      : undefined,
+                                };
+                                handleInputChange("interactive_content", {
+                                  ...formData.interactive_content,
+                                  questions: updated,
+                                  timeLimit:
+                                    formData.interactive_content?.timeLimit ||
+                                    1800,
+                                  passingScore:
+                                    formData.interactive_content
+                                      ?.passingScore || 70,
+                                });
+                              }}
+                              className="w-full p-2 border rounded-md text-sm"
+                            >
+                              <option value="multiple-choice">
+                                Multiple Choice
+                              </option>
+                              <option value="true-false">True/False</option>
+                              <option value="short-answer">Short Answer</option>
+                              <option value="essay">Essay</option>
+                              <option value="code">Code</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Question Text *
+                            </label>
+                            <Textarea
+                              value={question.question}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...(formData.interactive_content?.questions ||
+                                    []),
+                                ];
+                                updated[index] = {
+                                  ...updated[index],
+                                  question: e.target.value,
+                                };
+                                handleInputChange("interactive_content", {
+                                  ...formData.interactive_content,
+                                  questions: updated,
+                                  timeLimit:
+                                    formData.interactive_content?.timeLimit ||
+                                    1800,
+                                  passingScore:
+                                    formData.interactive_content
+                                      ?.passingScore || 70,
+                                });
+                              }}
+                              placeholder="Enter your question here..."
+                              rows={2}
+                              className="text-sm"
+                              required
+                            />
+                          </div>
+
+                          {(question.type === "multiple-choice" ||
+                            question.type === "true-false") && (
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Options *
+                              </label>
+                              <div className="space-y-2">
+                                {question.options?.map((option, optIndex) => (
+                                  <div
+                                    key={optIndex}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`correct-${question.id}`}
+                                      checked={
+                                        question.correctAnswer === optIndex
+                                      }
+                                      onChange={() => {
+                                        const updated = [
+                                          ...(formData.interactive_content
+                                            ?.questions || []),
+                                        ];
+                                        updated[index] = {
+                                          ...updated[index],
+                                          correctAnswer: optIndex,
+                                        };
+                                        handleInputChange(
+                                          "interactive_content",
+                                          {
+                                            ...formData.interactive_content,
+                                            questions: updated,
+                                            timeLimit:
+                                              formData.interactive_content
+                                                ?.timeLimit || 1800,
+                                            passingScore:
+                                              formData.interactive_content
+                                                ?.passingScore || 70,
+                                          }
+                                        );
+                                      }}
+                                      className="rounded"
+                                    />
+                                    <Input
+                                      value={option}
+                                      onChange={(e) => {
+                                        const updated = [
+                                          ...(formData.interactive_content
+                                            ?.questions || []),
+                                        ];
+                                        const updatedOptions = [
+                                          ...(updated[index].options || []),
+                                        ];
+                                        updatedOptions[optIndex] =
+                                          e.target.value;
+                                        updated[index] = {
+                                          ...updated[index],
+                                          options: updatedOptions,
+                                        };
+                                        handleInputChange(
+                                          "interactive_content",
+                                          {
+                                            ...formData.interactive_content,
+                                            questions: updated,
+                                            timeLimit:
+                                              formData.interactive_content
+                                                ?.timeLimit || 1800,
+                                            passingScore:
+                                              formData.interactive_content
+                                                ?.passingScore || 70,
+                                          }
+                                        );
+                                      }}
+                                      placeholder={`Option ${optIndex + 1}`}
+                                      className="text-sm"
+                                    />
+                                  </div>
+                                ))}
+                                {question.type === "multiple-choice" && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = [
+                                        ...(formData.interactive_content
+                                          ?.questions || []),
+                                      ];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        options: [
+                                          ...(updated[index].options || []),
+                                          "",
+                                        ],
+                                      };
+                                      handleInputChange("interactive_content", {
+                                        ...formData.interactive_content,
+                                        questions: updated,
+                                        timeLimit:
+                                          formData.interactive_content
+                                            ?.timeLimit || 1800,
+                                        passingScore:
+                                          formData.interactive_content
+                                            ?.passingScore || 70,
+                                      });
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add Option
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {(question.type === "short-answer" ||
+                            question.type === "code") && (
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Correct Answer (optional - for auto-grading)
+                              </label>
+                              <Input
+                                value={(question.correctAnswer as string) || ""}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.interactive_content
+                                      ?.questions || []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    correctAnswer: e.target.value,
+                                  };
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                placeholder="Expected answer (case-sensitive)"
+                                className="text-sm"
+                              />
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Points *
+                              </label>
+                              <Input
+                                type="number"
+                                value={question.points}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.interactive_content
+                                      ?.questions || []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    points: parseInt(e.target.value) || 10,
+                                  };
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                min="1"
+                                className="text-sm"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Explanation (shown after quiz)
+                              </label>
+                              <Input
+                                value={question.explanation || ""}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.interactive_content
+                                      ?.questions || []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    explanation: e.target.value,
+                                  };
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                placeholder="Optional explanation"
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {(!formData.interactive_content?.questions ||
+                      formData.interactive_content.questions.length === 0) && (
+                      <div className="text-center py-8 text-sm text-gray-500 border border-dashed rounded-lg">
+                        No questions added yet. Click "Add Question" to create
+                        one.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -413,16 +950,21 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                       Programming Language *
                     </label>
                     <select
-                      value={formData.code_environment?.language || "javascript"}
+                      value={
+                        formData.code_environment?.language || "javascript"
+                      }
                       onChange={(e) =>
                         handleInputChange("code_environment", {
                           ...formData.code_environment,
                           language: e.target.value,
-                          instructions: formData.code_environment?.instructions || "",
-                          starterCode: formData.code_environment?.starterCode || "",
+                          instructions:
+                            formData.code_environment?.instructions || "",
+                          starterCode:
+                            formData.code_environment?.starterCode || "",
                           testCases: formData.code_environment?.testCases || [],
                           allowRun: formData.code_environment?.allowRun ?? true,
-                          allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                          allowSubmit:
+                            formData.code_environment?.allowSubmit ?? true,
                         })
                       }
                       className="w-full p-2 border rounded-md"
@@ -449,16 +991,24 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                           handleInputChange("code_environment", {
                             ...formData.code_environment,
                             allowRun: e.target.checked,
-                            language: formData.code_environment?.language || "javascript",
-                            instructions: formData.code_environment?.instructions || "",
-                            starterCode: formData.code_environment?.starterCode || "",
-                            testCases: formData.code_environment?.testCases || [],
-                            allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                            language:
+                              formData.code_environment?.language ||
+                              "javascript",
+                            instructions:
+                              formData.code_environment?.instructions || "",
+                            starterCode:
+                              formData.code_environment?.starterCode || "",
+                            testCases:
+                              formData.code_environment?.testCases || [],
+                            allowSubmit:
+                              formData.code_environment?.allowSubmit ?? true,
                           })
                         }
                         className="rounded"
                       />
-                      <span className="text-sm font-medium">Allow Code Execution</span>
+                      <span className="text-sm font-medium">
+                        Allow Code Execution
+                      </span>
                     </label>
 
                     <label className="flex items-center space-x-2">
@@ -469,16 +1019,24 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                           handleInputChange("code_environment", {
                             ...formData.code_environment,
                             allowSubmit: e.target.checked,
-                            language: formData.code_environment?.language || "javascript",
-                            instructions: formData.code_environment?.instructions || "",
-                            starterCode: formData.code_environment?.starterCode || "",
-                            testCases: formData.code_environment?.testCases || [],
-                            allowRun: formData.code_environment?.allowRun ?? true,
+                            language:
+                              formData.code_environment?.language ||
+                              "javascript",
+                            instructions:
+                              formData.code_environment?.instructions || "",
+                            starterCode:
+                              formData.code_environment?.starterCode || "",
+                            testCases:
+                              formData.code_environment?.testCases || [],
+                            allowRun:
+                              formData.code_environment?.allowRun ?? true,
                           })
                         }
                         className="rounded"
                       />
-                      <span className="text-sm font-medium">Allow Submission</span>
+                      <span className="text-sm font-medium">
+                        Allow Submission
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -493,11 +1051,14 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                       handleInputChange("code_environment", {
                         ...formData.code_environment,
                         instructions: e.target.value,
-                        language: formData.code_environment?.language || "javascript",
-                        starterCode: formData.code_environment?.starterCode || "",
+                        language:
+                          formData.code_environment?.language || "javascript",
+                        starterCode:
+                          formData.code_environment?.starterCode || "",
                         testCases: formData.code_environment?.testCases || [],
                         allowRun: formData.code_environment?.allowRun ?? true,
-                        allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                        allowSubmit:
+                          formData.code_environment?.allowSubmit ?? true,
                       })
                     }
                     placeholder="## Task&#10;&#10;Write a function that...&#10;&#10;### Requirements:&#10;- Requirement 1&#10;- Requirement 2"
@@ -519,11 +1080,14 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                       handleInputChange("code_environment", {
                         ...formData.code_environment,
                         starterCode: e.target.value,
-                        language: formData.code_environment?.language || "javascript",
-                        instructions: formData.code_environment?.instructions || "",
+                        language:
+                          formData.code_environment?.language || "javascript",
+                        instructions:
+                          formData.code_environment?.instructions || "",
                         testCases: formData.code_environment?.testCases || [],
                         allowRun: formData.code_environment?.allowRun ?? true,
-                        allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                        allowSubmit:
+                          formData.code_environment?.allowSubmit ?? true,
                       })
                     }
                     placeholder="function add(a, b) {&#10;  // Your code here&#10;  return 0;&#10;}"
@@ -556,11 +1120,15 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                             ...(formData.code_environment?.testCases || []),
                             newTestCase,
                           ],
-                          language: formData.code_environment?.language || "javascript",
-                          instructions: formData.code_environment?.instructions || "",
-                          starterCode: formData.code_environment?.starterCode || "",
+                          language:
+                            formData.code_environment?.language || "javascript",
+                          instructions:
+                            formData.code_environment?.instructions || "",
+                          starterCode:
+                            formData.code_environment?.starterCode || "",
                           allowRun: formData.code_environment?.allowRun ?? true,
-                          allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                          allowSubmit:
+                            formData.code_environment?.allowSubmit ?? true,
                         });
                       }}
                       className="gap-2"
@@ -587,7 +1155,10 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                                   type="checkbox"
                                   checked={testCase.hidden || false}
                                   onChange={(e) => {
-                                    const updated = [...(formData.code_environment?.testCases || [])];
+                                    const updated = [
+                                      ...(formData.code_environment
+                                        ?.testCases || []),
+                                    ];
                                     updated[index] = {
                                       ...updated[index],
                                       hidden: e.target.checked,
@@ -595,11 +1166,21 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                                     handleInputChange("code_environment", {
                                       ...formData.code_environment,
                                       testCases: updated,
-                                      language: formData.code_environment?.language || "javascript",
-                                      instructions: formData.code_environment?.instructions || "",
-                                      starterCode: formData.code_environment?.starterCode || "",
-                                      allowRun: formData.code_environment?.allowRun ?? true,
-                                      allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                      language:
+                                        formData.code_environment?.language ||
+                                        "javascript",
+                                      instructions:
+                                        formData.code_environment
+                                          ?.instructions || "",
+                                      starterCode:
+                                        formData.code_environment
+                                          ?.starterCode || "",
+                                      allowRun:
+                                        formData.code_environment?.allowRun ??
+                                        true,
+                                      allowSubmit:
+                                        formData.code_environment
+                                          ?.allowSubmit ?? true,
                                     });
                                   }}
                                   className="rounded"
@@ -611,17 +1192,28 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  const updated = formData.code_environment?.testCases?.filter(
-                                    (_, i) => i !== index
-                                  ) || [];
+                                  const updated =
+                                    formData.code_environment?.testCases?.filter(
+                                      (_, i) => i !== index
+                                    ) || [];
                                   handleInputChange("code_environment", {
                                     ...formData.code_environment,
                                     testCases: updated,
-                                    language: formData.code_environment?.language || "javascript",
-                                    instructions: formData.code_environment?.instructions || "",
-                                    starterCode: formData.code_environment?.starterCode || "",
-                                    allowRun: formData.code_environment?.allowRun ?? true,
-                                    allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                    language:
+                                      formData.code_environment?.language ||
+                                      "javascript",
+                                    instructions:
+                                      formData.code_environment?.instructions ||
+                                      "",
+                                    starterCode:
+                                      formData.code_environment?.starterCode ||
+                                      "",
+                                    allowRun:
+                                      formData.code_environment?.allowRun ??
+                                      true,
+                                    allowSubmit:
+                                      formData.code_environment?.allowSubmit ??
+                                      true,
                                   });
                                 }}
                                 className="text-red-600 hover:text-red-700"
@@ -639,7 +1231,10 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                               <Input
                                 value={testCase.input}
                                 onChange={(e) => {
-                                  const updated = [...(formData.code_environment?.testCases || [])];
+                                  const updated = [
+                                    ...(formData.code_environment?.testCases ||
+                                      []),
+                                  ];
                                   updated[index] = {
                                     ...updated[index],
                                     input: e.target.value,
@@ -647,11 +1242,21 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                                   handleInputChange("code_environment", {
                                     ...formData.code_environment,
                                     testCases: updated,
-                                    language: formData.code_environment?.language || "javascript",
-                                    instructions: formData.code_environment?.instructions || "",
-                                    starterCode: formData.code_environment?.starterCode || "",
-                                    allowRun: formData.code_environment?.allowRun ?? true,
-                                    allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                    language:
+                                      formData.code_environment?.language ||
+                                      "javascript",
+                                    instructions:
+                                      formData.code_environment?.instructions ||
+                                      "",
+                                    starterCode:
+                                      formData.code_environment?.starterCode ||
+                                      "",
+                                    allowRun:
+                                      formData.code_environment?.allowRun ??
+                                      true,
+                                    allowSubmit:
+                                      formData.code_environment?.allowSubmit ??
+                                      true,
                                   });
                                 }}
                                 placeholder="add(2, 3)"
@@ -665,7 +1270,10 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                               <Input
                                 value={testCase.expectedOutput}
                                 onChange={(e) => {
-                                  const updated = [...(formData.code_environment?.testCases || [])];
+                                  const updated = [
+                                    ...(formData.code_environment?.testCases ||
+                                      []),
+                                  ];
                                   updated[index] = {
                                     ...updated[index],
                                     expectedOutput: e.target.value,
@@ -673,11 +1281,21 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                                   handleInputChange("code_environment", {
                                     ...formData.code_environment,
                                     testCases: updated,
-                                    language: formData.code_environment?.language || "javascript",
-                                    instructions: formData.code_environment?.instructions || "",
-                                    starterCode: formData.code_environment?.starterCode || "",
-                                    allowRun: formData.code_environment?.allowRun ?? true,
-                                    allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                    language:
+                                      formData.code_environment?.language ||
+                                      "javascript",
+                                    instructions:
+                                      formData.code_environment?.instructions ||
+                                      "",
+                                    starterCode:
+                                      formData.code_environment?.starterCode ||
+                                      "",
+                                    allowRun:
+                                      formData.code_environment?.allowRun ??
+                                      true,
+                                    allowSubmit:
+                                      formData.code_environment?.allowSubmit ??
+                                      true,
                                   });
                                 }}
                                 placeholder="5"
@@ -693,7 +1311,10 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                             <Input
                               value={testCase.description || ""}
                               onChange={(e) => {
-                                const updated = [...(formData.code_environment?.testCases || [])];
+                                const updated = [
+                                  ...(formData.code_environment?.testCases ||
+                                    []),
+                                ];
                                 updated[index] = {
                                   ...updated[index],
                                   description: e.target.value,
@@ -701,11 +1322,20 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                                 handleInputChange("code_environment", {
                                   ...formData.code_environment,
                                   testCases: updated,
-                                  language: formData.code_environment?.language || "javascript",
-                                  instructions: formData.code_environment?.instructions || "",
-                                  starterCode: formData.code_environment?.starterCode || "",
-                                  allowRun: formData.code_environment?.allowRun ?? true,
-                                  allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                  language:
+                                    formData.code_environment?.language ||
+                                    "javascript",
+                                  instructions:
+                                    formData.code_environment?.instructions ||
+                                    "",
+                                  starterCode:
+                                    formData.code_environment?.starterCode ||
+                                    "",
+                                  allowRun:
+                                    formData.code_environment?.allowRun ?? true,
+                                  allowSubmit:
+                                    formData.code_environment?.allowSubmit ??
+                                    true,
                                 });
                               }}
                               placeholder="Tests basic addition"
@@ -719,7 +1349,8 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                     {(!formData.code_environment?.testCases ||
                       formData.code_environment.testCases.length === 0) && (
                       <div className="text-center py-4 text-sm text-gray-500 border border-dashed rounded-lg">
-                        No test cases added yet. Click "Add Test Case" to create one.
+                        No test cases added yet. Click "Add Test Case" to create
+                        one.
                       </div>
                     )}
                   </div>
