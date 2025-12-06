@@ -1,11 +1,16 @@
 // /app/api/lessons/[id]/quiz/submit/route.ts
 
-import { NextRequest } from 'next/server';
-import { getLessonById } from '@/lib/db/queries/curriculum';
-import { getSession } from '@/lib/auth/session';
-import { getEnrollmentByUserAndCourse } from '@/lib/db/queries/enrollments';
-import { QuizData, QuizSubmissionResult, UserAnswer, QuizAttempt } from '@/types/quiz';
-import { sql } from '@/lib/db';
+import { NextRequest } from "next/server";
+import { getLessonById } from "@/lib/db/queries/curriculum";
+import { getSession } from "@/lib/auth/session";
+import { getEnrollmentByUserAndCourse } from "@/lib/db/queries/enrollments";
+import {
+  QuizData,
+  QuizSubmissionResult,
+  UserAnswer,
+  QuizAttempt,
+} from "@/types/quiz";
+import { sql } from "@/lib/db";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,37 +20,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getSession();
     if (!session || !session.userId) {
-      return Response.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await request.json();
-    const { answers, timeTaken } = body as { answers: UserAnswer[]; timeTaken: number };
+    const { answers, timeTaken } = body as {
+      answers: UserAnswer[];
+      timeTaken: number;
+    };
 
     const lesson = await getLessonById(id);
 
     if (!lesson) {
-      return Response.json(
-        { error: 'Lesson not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: "Lesson not found" }, { status: 404 });
     }
 
-    if (lesson.lesson_type !== 'quiz') {
+    if (lesson.lesson_type !== "quiz") {
       return Response.json(
-        { error: 'This lesson is not a quiz' },
+        { error: "This lesson is not a quiz" },
         { status: 400 }
       );
     }
 
     // Verify user is enrolled
-    const enrollment = await getEnrollmentByUserAndCourse(session.userId, lesson.course_id);
+    const enrollment = await getEnrollmentByUserAndCourse(
+      session.userId,
+      lesson.course_id
+    );
     if (!enrollment) {
       return Response.json(
-        { error: 'You must be enrolled in this course to submit the quiz' },
+        { error: "You must be enrolled in this course to submit the quiz" },
         { status: 403 }
       );
     }
@@ -53,14 +58,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Parse quiz data
     let quizData: QuizData | null = null;
     if (lesson.interactive_content) {
-      quizData = typeof lesson.interactive_content === 'string'
-        ? JSON.parse(lesson.interactive_content)
-        : lesson.interactive_content;
+      quizData =
+        typeof lesson.interactive_content === "string"
+          ? JSON.parse(lesson.interactive_content)
+          : lesson.interactive_content;
     }
 
     if (!quizData || !quizData.questions || quizData.questions.length === 0) {
       return Response.json(
-        { error: 'Quiz has no questions configured' },
+        { error: "Quiz has no questions configured" },
         { status: 400 }
       );
     }
@@ -72,25 +78,58 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     quizData.questions.forEach((question) => {
       totalPoints += question.points;
       const userAnswer = answers.find((a) => a.questionId === question.id);
-      
+
       if (userAnswer) {
-        if (question.type === 'essay' || question.type === 'code') {
+        if (question.type === "essay" || question.type === "code") {
           // For essay and code, give partial credit (50% by default)
           // In a real system, these would be manually graded
           score += question.points * 0.5;
-        } else if (question.type === 'short-answer') {
+        } else if (question.type === "short-answer") {
           // Case-insensitive comparison for short answer
           const userAns = String(userAnswer.answer).trim().toLowerCase();
-          const correctAns = String(question.correctAnswer || '').trim().toLowerCase();
+          const correctAns = String(question.correctAnswer || "")
+            .trim()
+            .toLowerCase();
           if (userAns === correctAns) {
             score += question.points;
           }
         } else {
           // Multiple choice or true/false
-          if (userAnswer.answer === question.correctAnswer) {
+          // Convert both to numbers for comparison (answers are stored as indices)
+          const userAns =
+            typeof userAnswer.answer === "string"
+              ? parseInt(userAnswer.answer, 10)
+              : Number(userAnswer.answer);
+          const correctAns =
+            typeof question.correctAnswer === "string"
+              ? parseInt(String(question.correctAnswer), 10)
+              : Number(question.correctAnswer);
+
+          // Debug logging (remove in production)
+          console.log("Question:", question.id, {
+            userAnswer: userAnswer.answer,
+            userAns,
+            correctAnswer: question.correctAnswer,
+            correctAns,
+            match: userAns === correctAns,
+            types: {
+              userType: typeof userAnswer.answer,
+              correctType: typeof question.correctAnswer,
+            },
+          });
+
+          if (userAns === correctAns && !isNaN(userAns) && !isNaN(correctAns)) {
             score += question.points;
           }
         }
+      } else {
+        // Debug: answer not found
+        console.log(
+          "No answer found for question:",
+          question.id,
+          "Available answers:",
+          answers.map((a) => a.questionId)
+        );
       }
     });
 
@@ -139,7 +178,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       `;
     } catch (dbError: any) {
       // If quiz_attempts table doesn't exist, log but don't fail
-      console.warn('⚠️ Could not save quiz attempt to database:', dbError.message);
+      console.warn(
+        "⚠️ Could not save quiz attempt to database:",
+        dbError.message
+      );
       // You might want to store attempts in enrollments.completed_lessons JSON instead
     }
 
@@ -169,7 +211,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     } catch (error: any) {
       // Silently fail if table doesn't exist - don't break quiz submission
-      console.warn('⚠️ Could not mark lesson complete:', error.message);
+      console.warn("⚠️ Could not mark lesson complete:", error.message);
     }
 
     // Return results with correct answers and explanations
@@ -181,7 +223,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       passed: attempt.passed,
       attempt,
       feedback: passed
-        ? 'Congratulations! You passed the quiz.'
+        ? "Congratulations! You passed the quiz."
         : `You scored ${percentage}%. You need ${passingScore}% to pass.`,
     };
 
@@ -191,11 +233,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       let isCorrect = false;
 
       if (userAnswer) {
-        if (question.type === 'essay' || question.type === 'code') {
+        if (question.type === "essay" || question.type === "code") {
           isCorrect = false; // Manual grading needed
-        } else if (question.type === 'short-answer') {
+        } else if (question.type === "short-answer") {
           const userAns = String(userAnswer.answer).trim().toLowerCase();
-          const correctAns = String(question.correctAnswer || '').trim().toLowerCase();
+          const correctAns = String(question.correctAnswer || "")
+            .trim()
+            .toLowerCase();
           isCorrect = userAns === correctAns;
         } else {
           isCorrect = userAnswer.answer === question.correctAnswer;
@@ -216,11 +260,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       questionResults,
     });
   } catch (error: any) {
-    console.error('❌ API Error submitting quiz:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("❌ API Error submitting quiz:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
