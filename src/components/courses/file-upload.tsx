@@ -17,6 +17,8 @@ interface FileUploadProps {
     duration?: number;
     bytes?: number;
     thumbnail?: string | null;
+    mimeType?: string;
+    format?: string;
   }) => void;
 
   /** Callback to notify parent when upload state changes */
@@ -127,6 +129,8 @@ export function FileUpload({
             url: data.url,
             duration: data.duration,
             bytes: data.bytes,
+            mimeType: data.mimeType,
+            format: data.format,
           });
         }
 

@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
       duration: uploadResult.duration || 0, // ADDED
       message: "File uploaded successfully",
       bytes: uploadResult.bytes,
+      mimeType: file.type, // Add MIME type for document type detection
+      format: uploadResult.format, // Cloudinary format if available
     });
   } catch (error: any) {
     console.error("❌ Upload API error:", error);

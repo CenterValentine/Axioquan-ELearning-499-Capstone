@@ -603,6 +603,11 @@ export async function updateLesson(
             : sql``
         }
         ${
+          lessonData.document_type !== undefined
+            ? sql`document_type = ${lessonData.document_type},`
+            : sql``
+        }
+        ${
           lessonData.content_html !== undefined
             ? sql`content_html = ${lessonData.content_html},`
             : sql``

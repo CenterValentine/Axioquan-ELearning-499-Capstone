@@ -52,6 +52,7 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
     video_duration: lesson.video_duration || 0,
     video_thumbnail: lesson.video_thumbnail || "",
     document_url: lesson.document_url || "",
+    document_type: lesson.document_type || "",
     content_html: lesson.content_html || "",
     is_published: lesson.is_published,
     is_preview: lesson.is_preview,
@@ -320,6 +321,12 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                   onUploadStateChange={(uploading) =>
                     setIsDocumentUploading(uploading)
                   }
+                  onUploadComplete={(meta) => {
+                    // Save document_type from MIME type when document is uploaded
+                    if (meta.mimeType) {
+                      handleInputChange("document_type", meta.mimeType);
+                    }
+                  }}
                   type="document"
                   description="Upload PDF, Word, PowerPoint, or other document files"
                 />
