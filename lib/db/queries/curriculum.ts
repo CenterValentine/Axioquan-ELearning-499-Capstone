@@ -614,9 +614,30 @@ export async function updateLesson(
         }
         ${
           lessonData.code_environment !== undefined
-            ? sql`code_environment = ${typeof lessonData.code_environment === 'string' 
-                ? lessonData.code_environment 
-                : JSON.stringify(lessonData.code_environment)}::jsonb,`
+            ? sql`code_environment = ${
+                typeof lessonData.code_environment === "string"
+                  ? lessonData.code_environment
+                  : JSON.stringify(lessonData.code_environment)
+              }::jsonb,`
+            : sql``
+        }
+        ${
+          lessonData.interactive_content !== undefined
+            ? sql`interactive_content = ${
+                typeof lessonData.interactive_content === "string"
+                  ? lessonData.interactive_content
+                  : JSON.stringify(lessonData.interactive_content)
+              }::jsonb,`
+            : sql``
+        }
+        ${
+          lessonData.passing_score !== undefined
+            ? sql`passing_score = ${lessonData.passing_score},`
+            : sql``
+        }
+        ${
+          lessonData.requires_passing_grade !== undefined
+            ? sql`requires_passing_grade = ${lessonData.requires_passing_grade},`
             : sql``
         }
         ${
