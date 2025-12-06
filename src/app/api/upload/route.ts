@@ -1,7 +1,7 @@
 // /src/app/api/upload/route.ts
 
-import { NextRequest } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { NextRequest } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
@@ -28,11 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Correct Cloudinary resource types
     const resourceType =
-      type === "video"
-        ? "video"
-        : type === "document"
-        ? "raw"
-        : "image";
+      type === "video" ? "video" : type === "document" ? "raw" : "image";
 
     // Correct folder mapping
     const folder =
@@ -64,11 +60,10 @@ export async function POST(request: NextRequest) {
     return Response.json({
       url: uploadResult.secure_url,
       publicId: uploadResult.public_id,
-      duration: uploadResult.duration || 0,  // ADDED
+      duration: uploadResult.duration || 0, // ADDED
       message: "File uploaded successfully",
       bytes: uploadResult.bytes,
     });
-
   } catch (error: any) {
     console.error("❌ Upload API error:", error);
 
