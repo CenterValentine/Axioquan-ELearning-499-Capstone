@@ -1,7 +1,6 @@
 // /lib/db/queries/curriculum.ts
 
 import { sql } from "../index";
-import { getCourseById } from "./courses";
 
 export interface Module {
   id: string;
@@ -739,11 +738,16 @@ export async function addCurriculum(
   course_slug: string;
 }> {
   try {
-    // Get course info
-    const course = await getCourseById(courseId);
-    if (!course) {
+    // Get course info directly to avoid circular dependency
+    const courses = await sql`
+      SELECT id, title, slug FROM courses WHERE id = ${courseId} LIMIT 1
+    `;
+
+    if (courses.length === 0) {
       throw new Error("Course not found");
     }
+
+    const course = courses[0] as { id: string; title: string; slug: string };
 
     // Create modules and lessons if provided
     if (body.modules && Array.isArray(body.modules)) {
