@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { FileUpload } from "@/components/courses/file-upload";
 import { Lesson } from "@/lib/db/queries/curriculum";
+import { CodeEnvironment, TestCase } from "@/lib/code/types";
+import { Plus, Trash2 } from "lucide-react";
 
 interface LessonEditorProps {
   lesson: Lesson;
@@ -43,6 +45,13 @@ const difficultyLevels = [
 ];
 
 export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
+  // Parse code_environment if it exists
+  const initialCodeEnv: CodeEnvironment | null = lesson.code_environment
+    ? (typeof lesson.code_environment === 'string'
+        ? JSON.parse(lesson.code_environment)
+        : lesson.code_environment)
+    : null;
+
   const [formData, setFormData] = useState({
     title: lesson.title,
     description: lesson.description || "",
@@ -54,6 +63,7 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
     document_url: lesson.document_url || "",
     document_type: lesson.document_type || "",
     content_html: lesson.content_html || "",
+    code_environment: initialCodeEnv,
     is_published: lesson.is_published,
     is_preview: lesson.is_preview,
   });
@@ -103,7 +113,14 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
 
     setLoading(true);
     try {
-      await onSave(formData);
+      // Prepare data for saving - stringify code_environment if it exists
+      const saveData = {
+        ...formData,
+        code_environment: formData.code_environment
+          ? JSON.stringify(formData.code_environment)
+          : null,
+      };
+      await onSave(saveData);
     } finally {
       setLoading(false);
     }
@@ -189,9 +206,21 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                 <select
                   id="lesson_type"
                   value={formData.lesson_type}
-                  onChange={(e) =>
-                    handleInputChange("lesson_type", e.target.value)
-                  }
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    handleInputChange("lesson_type", newType);
+                    // Initialize code_environment when switching to code type
+                    if (newType === "code" && !formData.code_environment) {
+                      handleInputChange("code_environment", {
+                        language: "javascript",
+                        instructions: "",
+                        starterCode: "",
+                        testCases: [],
+                        allowRun: true,
+                        allowSubmit: true,
+                      });
+                    }
+                  }}
                   className="w-full p-2 border rounded-md"
                 >
                   {lessonTypes.map((type) => (
@@ -373,6 +402,328 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                   Assignment functionality coming soon! For now, you can
                   describe the assignment in the description field.
                 </p>
+              </div>
+            )}
+
+            {formData.lesson_type === "code" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Programming Language *
+                    </label>
+                    <select
+                      value={formData.code_environment?.language || "javascript"}
+                      onChange={(e) =>
+                        handleInputChange("code_environment", {
+                          ...formData.code_environment,
+                          language: e.target.value,
+                          instructions: formData.code_environment?.instructions || "",
+                          starterCode: formData.code_environment?.starterCode || "",
+                          testCases: formData.code_environment?.testCases || [],
+                          allowRun: formData.code_environment?.allowRun ?? true,
+                          allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                        })
+                      }
+                      className="w-full p-2 border rounded-md"
+                      required
+                    >
+                      <option value="javascript">JavaScript</option>
+                      <option value="typescript">TypeScript</option>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                      <option value="cpp">C++</option>
+                      <option value="c">C</option>
+                      <option value="csharp">C#</option>
+                      <option value="go">Go</option>
+                      <option value="rust">Rust</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.code_environment?.allowRun ?? true}
+                        onChange={(e) =>
+                          handleInputChange("code_environment", {
+                            ...formData.code_environment,
+                            allowRun: e.target.checked,
+                            language: formData.code_environment?.language || "javascript",
+                            instructions: formData.code_environment?.instructions || "",
+                            starterCode: formData.code_environment?.starterCode || "",
+                            testCases: formData.code_environment?.testCases || [],
+                            allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                          })
+                        }
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium">Allow Code Execution</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.code_environment?.allowSubmit ?? true}
+                        onChange={(e) =>
+                          handleInputChange("code_environment", {
+                            ...formData.code_environment,
+                            allowSubmit: e.target.checked,
+                            language: formData.code_environment?.language || "javascript",
+                            instructions: formData.code_environment?.instructions || "",
+                            starterCode: formData.code_environment?.starterCode || "",
+                            testCases: formData.code_environment?.testCases || [],
+                            allowRun: formData.code_environment?.allowRun ?? true,
+                          })
+                        }
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium">Allow Submission</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Instructions (Markdown) *
+                  </label>
+                  <Textarea
+                    value={formData.code_environment?.instructions || ""}
+                    onChange={(e) =>
+                      handleInputChange("code_environment", {
+                        ...formData.code_environment,
+                        instructions: e.target.value,
+                        language: formData.code_environment?.language || "javascript",
+                        starterCode: formData.code_environment?.starterCode || "",
+                        testCases: formData.code_environment?.testCases || [],
+                        allowRun: formData.code_environment?.allowRun ?? true,
+                        allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                      })
+                    }
+                    placeholder="## Task&#10;&#10;Write a function that...&#10;&#10;### Requirements:&#10;- Requirement 1&#10;- Requirement 2"
+                    rows={6}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use Markdown formatting for instructions
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Starter Code
+                  </label>
+                  <Textarea
+                    value={formData.code_environment?.starterCode || ""}
+                    onChange={(e) =>
+                      handleInputChange("code_environment", {
+                        ...formData.code_environment,
+                        starterCode: e.target.value,
+                        language: formData.code_environment?.language || "javascript",
+                        instructions: formData.code_environment?.instructions || "",
+                        testCases: formData.code_environment?.testCases || [],
+                        allowRun: formData.code_environment?.allowRun ?? true,
+                        allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                      })
+                    }
+                    placeholder="function add(a, b) {&#10;  // Your code here&#10;  return 0;&#10;}"
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Initial code provided to students (optional)
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">
+                      Test Cases
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newTestCase: TestCase = {
+                          input: "",
+                          expectedOutput: "",
+                          hidden: false,
+                        };
+                        handleInputChange("code_environment", {
+                          ...formData.code_environment,
+                          testCases: [
+                            ...(formData.code_environment?.testCases || []),
+                            newTestCase,
+                          ],
+                          language: formData.code_environment?.language || "javascript",
+                          instructions: formData.code_environment?.instructions || "",
+                          starterCode: formData.code_environment?.starterCode || "",
+                          allowRun: formData.code_environment?.allowRun ?? true,
+                          allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                        });
+                      }}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Test Case
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(formData.code_environment?.testCases || []).map(
+                      (testCase, index) => (
+                        <div
+                          key={index}
+                          className="p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-900"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">
+                              Test Case {index + 1}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center space-x-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={testCase.hidden || false}
+                                  onChange={(e) => {
+                                    const updated = [...(formData.code_environment?.testCases || [])];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      hidden: e.target.checked,
+                                    };
+                                    handleInputChange("code_environment", {
+                                      ...formData.code_environment,
+                                      testCases: updated,
+                                      language: formData.code_environment?.language || "javascript",
+                                      instructions: formData.code_environment?.instructions || "",
+                                      starterCode: formData.code_environment?.starterCode || "",
+                                      allowRun: formData.code_environment?.allowRun ?? true,
+                                      allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                    });
+                                  }}
+                                  className="rounded"
+                                />
+                                <span>Hidden</span>
+                              </label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updated = formData.code_environment?.testCases?.filter(
+                                    (_, i) => i !== index
+                                  ) || [];
+                                  handleInputChange("code_environment", {
+                                    ...formData.code_environment,
+                                    testCases: updated,
+                                    language: formData.code_environment?.language || "javascript",
+                                    instructions: formData.code_environment?.instructions || "",
+                                    starterCode: formData.code_environment?.starterCode || "",
+                                    allowRun: formData.code_environment?.allowRun ?? true,
+                                    allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Input
+                              </label>
+                              <Input
+                                value={testCase.input}
+                                onChange={(e) => {
+                                  const updated = [...(formData.code_environment?.testCases || [])];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    input: e.target.value,
+                                  };
+                                  handleInputChange("code_environment", {
+                                    ...formData.code_environment,
+                                    testCases: updated,
+                                    language: formData.code_environment?.language || "javascript",
+                                    instructions: formData.code_environment?.instructions || "",
+                                    starterCode: formData.code_environment?.starterCode || "",
+                                    allowRun: formData.code_environment?.allowRun ?? true,
+                                    allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                  });
+                                }}
+                                placeholder="add(2, 3)"
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Expected Output
+                              </label>
+                              <Input
+                                value={testCase.expectedOutput}
+                                onChange={(e) => {
+                                  const updated = [...(formData.code_environment?.testCases || [])];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    expectedOutput: e.target.value,
+                                  };
+                                  handleInputChange("code_environment", {
+                                    ...formData.code_environment,
+                                    testCases: updated,
+                                    language: formData.code_environment?.language || "javascript",
+                                    instructions: formData.code_environment?.instructions || "",
+                                    starterCode: formData.code_environment?.starterCode || "",
+                                    allowRun: formData.code_environment?.allowRun ?? true,
+                                    allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                  });
+                                }}
+                                placeholder="5"
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Description (optional)
+                            </label>
+                            <Input
+                              value={testCase.description || ""}
+                              onChange={(e) => {
+                                const updated = [...(formData.code_environment?.testCases || [])];
+                                updated[index] = {
+                                  ...updated[index],
+                                  description: e.target.value,
+                                };
+                                handleInputChange("code_environment", {
+                                  ...formData.code_environment,
+                                  testCases: updated,
+                                  language: formData.code_environment?.language || "javascript",
+                                  instructions: formData.code_environment?.instructions || "",
+                                  starterCode: formData.code_environment?.starterCode || "",
+                                  allowRun: formData.code_environment?.allowRun ?? true,
+                                  allowSubmit: formData.code_environment?.allowSubmit ?? true,
+                                });
+                              }}
+                              placeholder="Tests basic addition"
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {(!formData.code_environment?.testCases ||
+                      formData.code_environment.testCases.length === 0) && (
+                      <div className="text-center py-4 text-sm text-gray-500 border border-dashed rounded-lg">
+                        No test cases added yet. Click "Add Test Case" to create one.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
