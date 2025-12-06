@@ -17,6 +17,16 @@ export function LessonDebugPanel({
   courseData,
   title = "Debug Data",
 }: LessonDebugPanelProps) {
+  // Production-safe: Only show debug panel in development or when explicitly enabled
+  const isDebugEnabled = useMemo(() => {
+    return (
+      process.env.NODE_ENV === "development" ||
+      process.env.NEXT_PUBLIC_DEBUG_PANEL === "true" ||
+      (typeof window !== "undefined" &&
+        (window as any).__DEBUG_PANEL__ === true)
+    );
+  }, []);
+
   const [showDebug, setShowDebug] = useState(false);
   const [debugData, setDebugData] = useState<any>(null);
 
@@ -42,6 +52,11 @@ export function LessonDebugPanel({
   const dataString = useMemo(() => {
     return JSON.stringify(debugData || combinedData, null, 2);
   }, [debugData, combinedData]);
+
+  // Don't render anything in production unless explicitly enabled
+  if (!isDebugEnabled) {
+    return null;
+  }
 
   return (
     <div className="mt-6 border-t border-gray-200 pt-4">

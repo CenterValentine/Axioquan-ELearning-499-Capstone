@@ -241,18 +241,6 @@ export function DocumentViewer({
   const fileName = documentUrl ? getFileNameFromUrl(documentUrl) : "document";
   const displayTitle = documentTitle || fileName;
 
-  // Debug logging (can be removed in production)
-  if (process.env.NODE_ENV === "development") {
-    console.log("DocumentViewer Debug:", {
-      documentUrl,
-      documentType,
-      detectedMimeType,
-      effectiveDocumentType,
-      detectedType: docType,
-      fileName,
-    });
-  }
-
   // Handle PDF iframe load - verify PDF is accessible and add timeout
   useEffect(() => {
     if (docType === "pdf" && documentUrl) {
