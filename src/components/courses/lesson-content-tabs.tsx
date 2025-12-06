@@ -9,23 +9,29 @@ import {
   ListOrdered,
   Link as LinkIcon,
 } from "lucide-react";
-import { Lesson } from "@/types/lesson";
-import { LessonPlayer } from "../curriculum/lesson-player";
+import { Lesson as DbLesson } from "@/lib/db/queries/curriculum";
+import { Lesson as UILesson } from "@/types/lesson";
 import { LearningObjectives } from "./learning-objectives";
 import { BookmarksSection } from "./bookmarks-section";
 
+type AnyLesson = DbLesson | UILesson;
+
 interface LessonContentTabsProps {
-  lesson: Lesson;
+  lesson: AnyLesson;
+  currentModule: number;
+  currentLesson: number;
   onBookmarkClick: (time: number) => void;
 }
 
 export function LessonContentTabs({
   lesson,
+  currentModule,
+  currentLesson,
   onBookmarkClick,
 }: LessonContentTabsProps) {
   // Manage bookmarked times per lesson
   const [bookmarkedTimes, setBookmarkedTimes] = useState<number[]>([]);
-  
+
   // Manage notes per lesson
   const [notes, setNotes] = useState("");
 
@@ -96,9 +102,6 @@ export function LessonContentTabs({
 
                 {/* Learning Objectives */}
                 <LearningObjectives />
-                {lesson.lesson_type !== "video" && (
-                  <LessonPlayer lesson={lesson} />
-                )}
 
                 {/* Bookmarks */}
                 <BookmarksSection
@@ -356,4 +359,3 @@ export function LessonContentTabs({
     </>
   );
 }
-

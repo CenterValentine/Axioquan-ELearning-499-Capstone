@@ -4,11 +4,14 @@ interface CourseProgress1Props {
   courseData: CourseData;
   currentModule: number;
   currentLesson: number;
+  overallProgress?: number;
   variant?: "bar1" | "bar2";
 }
 
 interface CourseProgress2Props {
   courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
   overallProgress?: number;
   variant: "bar1" | "bar2";
 }
@@ -19,38 +22,10 @@ const formatTime = (seconds: number) => {
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
 };
 
-export function CourseProgressBar1({
+export function CourseProgressBar({
   courseData,
   currentModule,
   currentLesson,
-  variant = "bar2",
-}: CourseProgress1Props) {
-  const currentLessonData = courseData.modules[currentModule].lessons[
-    currentLesson
-  ] as Lesson;
-  const progressPercentage =
-    (currentLessonData.watched / currentLessonData.duration) * 100;
-
-  return (
-    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-      <div className="space-y-2">
-        <div className="w-full bg-white/20 rounded-full h-1.5">
-          <div
-            className="bg-accent rounded-full h-full transition-all"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
-        <div className="flex items-center justify-between text-white text-xs">
-          <span>{formatTime(currentLessonData.watched)}</span>
-          <span>{formatTime(currentLessonData.duration)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function CourseProgressBar({
-  courseData,
   overallProgress: providedProgress,
   variant = "bar1",
 }: CourseProgress2Props & { overallProgress?: number }) {
@@ -114,14 +89,22 @@ export default function CourseProgress({
   variant = "bar1",
 }: CourseProgress1Props) {
   if (variant === "bar2") {
-    return <CourseProgressBar courseData={courseData} variant="bar2" />;
+    return (
+      <CourseProgressBar
+        courseData={courseData}
+        currentModule={currentModule}
+        currentLesson={currentLesson}
+        variant="bar2"
+      />
+    );
   }
 
   return (
-    <CourseProgressBar1
+    <CourseProgressBar
       courseData={courseData}
       currentModule={currentModule}
       currentLesson={currentLesson}
+      variant="bar2"
     />
   );
 }

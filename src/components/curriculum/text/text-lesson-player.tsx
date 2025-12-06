@@ -2,14 +2,22 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText } from "lucide-react";
-import { Lesson } from "@/lib/db/queries/curriculum";
-import { LessonDebugPanel } from "../lesson-debug-panel";
+import { LessonDebugPanel } from "../debug/lesson-debug-panel";
+import { CourseData } from "@/types/lesson";
 
 interface TextLessonPlayerProps {
-  lesson: Lesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
 }
 
-export function TextLessonPlayer({ lesson }: TextLessonPlayerProps) {
+export function TextLessonPlayer({
+  courseData,
+  currentModule,
+  currentLesson,
+}: TextLessonPlayerProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -26,9 +34,12 @@ export function TextLessonPlayer({ lesson }: TextLessonPlayerProps) {
         )}
 
         {/* Debug Panel */}
-        <LessonDebugPanel data={lesson} title="Lesson Data from Database" />
+        <LessonDebugPanel
+          data={lesson}
+          courseData={courseData}
+          title="Lesson Data from Database"
+        />
       </CardContent>
     </Card>
   );
 }
-

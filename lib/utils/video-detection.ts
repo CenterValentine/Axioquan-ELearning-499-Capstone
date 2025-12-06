@@ -55,9 +55,7 @@ export function getVideoType(
 /**
  * Check if a video URL is an MP4 or direct video file
  */
-export function isDirectVideo(
-  videoUrl: string | null | undefined
-): boolean {
+export function isDirectVideo(videoUrl: string | null | undefined): boolean {
   const type = getVideoType(videoUrl);
   return type === "mp4" || type === "cloudinary";
 }
@@ -65,9 +63,7 @@ export function isDirectVideo(
 /**
  * Check if a video URL is a YouTube video
  */
-export function isYouTubeVideo(
-  videoUrl: string | null | undefined
-): boolean {
+export function isYouTubeVideo(videoUrl: string | null | undefined): boolean {
   return getVideoType(videoUrl) === "youtube";
 }
 
@@ -111,10 +107,7 @@ export function getYouTubeEmbedUrl(url: string): string | null {
  * Extract Vimeo video ID from URL
  */
 export function getVimeoVideoId(url: string): string | null {
-  const patterns = [
-    /vimeo\.com\/(\d+)/,
-    /vimeo\.com\/video\/(\d+)/,
-  ];
+  const patterns = [/vimeo\.com\/(\d+)/, /vimeo\.com\/video\/(\d+)/];
 
   for (const pattern of patterns) {
     const match = url.match(pattern);
@@ -143,13 +136,13 @@ export function getVideoMimeType(videoUrl: string | null): string {
   if (!videoUrl) return "video/mp4";
 
   const url = videoUrl.toLowerCase();
-  
+
   if (url.includes(".webm")) return "video/webm";
   if (url.includes(".mov")) return "video/quicktime";
   if (url.includes(".avi")) return "video/x-msvideo";
   if (url.includes(".mkv")) return "video/x-matroska";
   if (url.includes(".m4v")) return "video/x-m4v";
-  
+
   // Default to MP4
   return "video/mp4";
 }
@@ -157,6 +150,9 @@ export function getVideoMimeType(videoUrl: string | null): string {
 /**
  * Find the most recent video lesson at or before the current lesson.
  * If currentLessonId is not found, we start from the last lesson in the module.
+ *
+ * This function prioritizes the current lesson if it's a video lesson,
+ * ensuring that switching between consecutive video lessons works correctly.
  */
 export function findNearestVideoLesson(
   lessons: Lesson[],
@@ -165,9 +161,20 @@ export function findNearestVideoLesson(
   if (!lessons.length) return null;
 
   // Where is the "current" lesson in this module?
-  const currentIndex = lessons.findIndex((lesson) => lesson.id === currentLessonId);
+  const currentIndex = lessons.findIndex(
+    (lesson) => lesson.id === currentLessonId
+  );
 
-  // If not found, assume "current" is the last lesson in the module
+  // If current lesson is found and it's a video lesson, return it immediately
+  // This ensures consecutive video lessons switch correctly
+  if (currentIndex !== -1) {
+    const currentLesson = lessons[currentIndex];
+    if (currentLesson.lesson_type === "video" && currentLesson.video_url) {
+      return currentLesson;
+    }
+  }
+
+  // If not found or current lesson is not a video, start from current index (or last lesson)
   const startIndex = currentIndex === -1 ? lessons.length - 1 : currentIndex;
 
   // Walk backwards until we find a video lesson that has a non-null video_url

@@ -1,13 +1,20 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Lesson } from "@/lib/db/queries/curriculum";
+import { CourseData } from "@/types/lesson";
 
 interface AudioLessonPlayerProps {
-  lesson: Lesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
 }
 
-export function AudioLessonPlayer({ lesson }: AudioLessonPlayerProps) {
+export function AudioLessonPlayer({
+  courseData,
+  currentModule,
+  currentLesson,
+}: AudioLessonPlayerProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
   return (
     <Card>
       <CardContent className="p-6">
@@ -29,4 +36,3 @@ export function AudioLessonPlayer({ lesson }: AudioLessonPlayerProps) {
     </Card>
   );
 }
-

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { LessonPlayer } from "../curriculum/lesson-player";
 import { CourseVideo } from "./course-video";
@@ -21,6 +22,7 @@ interface CourseLearningProps {
   courseDescription?: string;
   courseFullDescription?: string;
   courseInstructor?: string;
+  initialLessonId?: string; // Optional lesson ID from URL query parameter
 }
 
 export default function CourseLearningPage({
@@ -30,9 +32,51 @@ export default function CourseLearningPage({
   courseDescription,
   courseFullDescription,
   courseInstructor,
+  initialLessonId,
 }: CourseLearningProps) {
-  const [currentModule, setCurrentModule] = useState(0);
-  const [currentLesson, setCurrentLesson] = useState(0);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Ref to track programmatic lesson changes (prevents useEffect from interfering)
+  const isProgrammaticChange = useRef(false);
+
+  // Helper function to find lesson indices from lessonId
+  const findLessonIndices = (
+    lessonId: string | null | undefined,
+    modules: Module[]
+  ): { moduleIndex: number; lessonIndex: number } => {
+    // Default to first lesson
+    let moduleIndex = 0;
+    let lessonIndex = 0;
+
+    if (lessonId && modules.length > 0) {
+      // Search for the lesson
+      for (let i = 0; i < modules.length; i++) {
+        const index = modules[i].lessons.findIndex(
+          (lesson) => lesson.id === lessonId
+        );
+        if (index !== -1) {
+          moduleIndex = i;
+          lessonIndex = index;
+          break; // Found, exit early
+        }
+      }
+    }
+
+    return { moduleIndex, lessonIndex };
+  };
+
+  // Lazy initialization: Calculate initial values synchronously before first render
+  const [currentModule, setCurrentModule] = useState(() => {
+    const lessonIdToFind = initialLessonId || searchParams.get("lessonId");
+    return findLessonIndices(lessonIdToFind, modules).moduleIndex;
+  });
+
+  const [currentLesson, setCurrentLesson] = useState(() => {
+    const lessonIdToFind = initialLessonId || searchParams.get("lessonId");
+    return findLessonIndices(lessonIdToFind, modules).lessonIndex;
+  });
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isVideoExpanded, setIsVideoExpanded] = useState(false);
@@ -75,11 +119,56 @@ export default function CourseLearningPage({
     setCompletedLessons(completed);
   }, [modules]);
 
+  // Update lesson selection when URL changes (e.g., browser back/forward)
+  // Note: This only handles external URL changes, not our own selectLesson calls
+  useEffect(() => {
+    // Skip if this is a programmatic change we just made
+    if (isProgrammaticChange.current) {
+      isProgrammaticChange.current = false; // Reset flag
+      return;
+    }
+
+    const lessonIdFromUrl = searchParams.get("lessonId");
+    // Only update if URL has a different lessonId than what we're currently showing
+    const currentLessonId = modules[currentModule]?.lessons[currentLesson]?.id;
+
+    // Skip if we're already on this lesson (prevents feedback loop)
+    if (lessonIdFromUrl && lessonIdFromUrl !== currentLessonId) {
+      const { moduleIndex, lessonIndex } = findLessonIndices(
+        lessonIdFromUrl,
+        modules
+      );
+      // Only update if the found indices are different from current
+      if (moduleIndex !== currentModule || lessonIndex !== currentLesson) {
+        setCurrentModule(moduleIndex);
+        setCurrentLesson(lessonIndex);
+      }
+    }
+  }, [searchParams, modules, currentModule, currentLesson]);
+
   const selectLesson = (moduleIndex: number, lessonIndex: number) => {
+    // Mark this as a programmatic change to prevent useEffect from interfering
+    isProgrammaticChange.current = true;
+
+    // Update state immediately for instant UI update
     setCurrentModule(moduleIndex);
     setCurrentLesson(lessonIndex);
     setCurrentTime(0);
     setIsPlaying(false);
+
+    // Update URL with lesson ID using router.replace (no history entry, but updates searchParams)
+    // Use modules prop directly to ensure we have the latest data
+    const lessonId = modules[moduleIndex]?.lessons[lessonIndex]?.id;
+    if (lessonId) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("lessonId", lessonId);
+
+      // Use replace instead of push to avoid adding history entries
+      // This updates the URL and searchParams without full page navigation
+      router.replace(`/courses/learn/${courseId}?${params.toString()}`, {
+        scroll: false,
+      });
+    }
   };
 
   const completeLesson = async () => {
@@ -239,7 +328,8 @@ export default function CourseLearningPage({
     currentLesson
   ] as Lesson;
 
-  const currentModuleLessons = courseData.modules[currentModule].lessons as Lesson[];
+  const currentModuleLessons = courseData.modules[currentModule]
+    .lessons as Lesson[];
 
   // If video is expanded, show full screen video page
   if (isVideoExpanded) {
@@ -268,8 +358,6 @@ export default function CourseLearningPage({
 
       {/* Main Content Area - Normal Page Scroll with Sidebar Offset */}
       <div className="flex-1 overflow-y-auto md:ml-80 w-full">
-
-        
         {/* Mobile Header */}
         <MobileHeader
           courseData={courseData}
@@ -290,6 +378,7 @@ export default function CourseLearningPage({
 
           {/* Video Player Section - Full Width - Optional */}
           <CourseVideo
+            key={`${currentModule}-${currentLessonData.id}`}
             courseData={courseData}
             currentModule={currentModule}
             currentLesson={currentLessonData.id}
@@ -310,7 +399,8 @@ export default function CourseLearningPage({
             courseData={courseData}
             currentModule={currentModule}
             currentLesson={currentLesson}
-            overallProgress={overallProgress}
+            variant="bar1"
+            // overallProgress={overallProgress}
           />
 
           {/* Lesson Content Section - Full Width */}
@@ -323,6 +413,9 @@ export default function CourseLearningPage({
                   lesson={
                     courseData.modules[currentModule].lessons[currentLesson]
                   }
+                  courseData={courseData}
+                  currentModule={currentModule}
+                  currentLesson={currentLesson}
                 />
               )}
             </div>
@@ -330,6 +423,8 @@ export default function CourseLearningPage({
             {/* Lesson Content Tabs */}
             <LessonContentTabs
               lesson={currentLessonData}
+              currentModule={currentModule}
+              currentLesson={currentLesson}
               onBookmarkClick={setCurrentTime}
             />
 

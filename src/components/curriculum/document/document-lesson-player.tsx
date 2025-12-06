@@ -3,14 +3,22 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Download } from "lucide-react";
-import { Lesson } from "@/lib/db/queries/curriculum";
-import { LessonDebugPanel } from "../lesson-debug-panel";
+
+import { LessonDebugPanel } from "../debug/lesson-debug-panel";
+import { CourseData } from "@/types/lesson";
 
 interface DocumentLessonPlayerProps {
-  lesson: Lesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
 }
 
-export function DocumentLessonPlayer({ lesson }: DocumentLessonPlayerProps) {
+export function DocumentLessonPlayer({
+  courseData,
+  currentModule,
+  currentLesson,
+}: DocumentLessonPlayerProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
   const handleDownload = (url: string | null, filename?: string) => {
     if (!url) return;
 
@@ -47,7 +55,11 @@ export function DocumentLessonPlayer({ lesson }: DocumentLessonPlayerProps) {
         </div>
 
         {/* Debug Panel */}
-        <LessonDebugPanel data={lesson} title="Lesson Data from Database" />
+        <LessonDebugPanel
+          data={lesson}
+          courseData={courseData}
+          title="Lesson Data from Database"
+        />
       </CardContent>
     </Card>
   );
