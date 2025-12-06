@@ -613,6 +613,13 @@ export async function updateLesson(
             : sql``
         }
         ${
+          lessonData.code_environment !== undefined
+            ? sql`code_environment = ${typeof lessonData.code_environment === 'string' 
+                ? lessonData.code_environment 
+                : JSON.stringify(lessonData.code_environment)}::jsonb,`
+            : sql``
+        }
+        ${
           lessonData.order_index !== undefined
             ? sql`order_index = ${lessonData.order_index},`
             : sql``
