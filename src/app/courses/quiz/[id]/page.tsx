@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/auth/session";
 // import Sidebar from '@/components/dashboard/sidebar'
 import QuizPage from "@/components/curriculum/quiz/quiz-page";
+import Unauthorized from "@/components/auth/unauthorized";
 
 interface QuizCoursePageProps {
   params: {
@@ -14,16 +15,7 @@ export default async function QuizCoursePage({ params }: QuizCoursePageProps) {
   const session = await getSession();
 
   if (!session || !session.userId) {
-    return (
-      <div className="flex min-h-screen bg-gray-50 items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Unauthorized
-          </h1>
-          <p className="text-gray-600">Please log in to access this page.</p>
-        </div>
-      </div>
-    );
+    return <Unauthorized />;
   }
 
   const user = {

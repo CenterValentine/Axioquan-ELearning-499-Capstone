@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { type Lesson as DbLesson } from "@/lib/db/queries/curriculum";
 import { CourseData, Lesson as UILesson } from "@/types/lesson";
-import { CourseProgressBar1 } from "../../courses/course-progress";
+import { CourseProgressBar } from "../../courses/course-progress";
 import { CoreVideoPlayer } from "./core-video-player";
 
 interface FullScreenVideoPlayerProps {
@@ -69,10 +69,11 @@ export function FullScreenVideoPlayer({
           typeof currentModule === "number" &&
           typeof currentLesson === "number" && (
             <div className="w-full max-w-4xl mt-4 px-4">
-              <CourseProgressBar1
+              <CourseProgressBar
                 courseData={courseData}
                 currentModule={currentModule}
                 currentLesson={currentLesson}
+                variant="bar1"
               />
             </div>
           )}
@@ -80,4 +81,3 @@ export function FullScreenVideoPlayer({
     </div>
   );
 }
-

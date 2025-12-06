@@ -2,15 +2,20 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lesson } from "@/lib/db/queries/curriculum";
+import { CourseData } from "@/types/lesson";
 
 interface LiveSessionLessonPlayerProps {
-  lesson: Lesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
 }
 
 export function LiveSessionLessonPlayer({
-  lesson,
+  courseData,
+  currentModule,
+  currentLesson,
 }: LiveSessionLessonPlayerProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
   return (
     <Card>
       <CardContent className="p-6">
@@ -30,4 +35,3 @@ export function LiveSessionLessonPlayer({
     </Card>
   );
 }
-

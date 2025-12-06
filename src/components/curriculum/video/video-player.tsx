@@ -4,31 +4,33 @@
 
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { type Lesson as DbLesson } from "@/lib/db/queries/curriculum";
+import { CourseData } from "@/types/lesson";
 import { CoreVideoPlayer } from "./core-video-player";
 
 interface VideoPlayerPageProps {
-  courseId: string;
-  lessonId: string;
-  lesson: DbLesson;
+  courseData: CourseData;
+  currentModule: number;
+  currentLesson: number;
   courseTitle?: string;
   courseDescription?: string;
 }
 
 export default function VideoPlayerPage({
-  courseId,
-  lessonId,
-  lesson,
+  courseData,
+  currentModule,
+  currentLesson,
   courseTitle,
   courseDescription,
 }: VideoPlayerPageProps) {
+  const lesson = courseData.modules[currentModule].lessons[currentLesson];
+
   return (
     <div className="flex-1 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-border p-4">
         <div className="max-w-6xl mx-auto flex items-center gap-4">
           <Link
-            href={`/courses/learn/${courseId}`}
+            href={`/courses/learn/${courseData.id}`}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
           >
             <ChevronLeft size={20} />
@@ -46,10 +48,13 @@ export default function VideoPlayerPage({
       {/* Video Player */}
       <div className="flex-1 bg-black flex items-center justify-center p-4">
         <div className="w-full max-w-6xl aspect-video bg-black rounded-lg overflow-hidden relative">
-          <CoreVideoPlayer lesson={lesson} courseId={courseId} lessonId={lessonId} />
+          <CoreVideoPlayer
+            courseData={courseData}
+            currentModule={currentModule}
+            currentLesson={currentLesson}
+          />
         </div>
       </div>
     </div>
   );
 }
-

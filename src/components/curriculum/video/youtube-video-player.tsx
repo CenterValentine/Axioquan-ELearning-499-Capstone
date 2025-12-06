@@ -24,10 +24,11 @@ export function YouTubeVideoPlayer({
   return (
     <>
       {/* Video Player Section - Full Width */}
-      <div className="bg-white p-4 md:p-8 border-b border-border w-full">
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
-          <div className="bg-black rounded-xl overflow-hidden relative w-full aspect-video max-w-4xl md:min-w-[896px] mx-auto shadow-lg">
+      <div className="bg-white p-2 md:p-4 lg:p-8 border-b border-border w-full">
+        <div className="max-w-7xl mx-auto w-full px-2 md:px-4 lg:px-6">
+          <div className="bg-black rounded-xl overflow-hidden relative w-full aspect-video max-w-4xl mx-auto shadow-lg">
             <iframe
+              key={lessonId}
               className="w-full h-full"
               src={youtubeEmbedUrl}
               title="AxioQuan video player"
@@ -39,7 +40,7 @@ export function YouTubeVideoPlayer({
           {/* Watch on Separate Page Link */}
           <div className="mt-4 text-center">
             <Link
-              href={`/courses/watch/${courseId}/${lessonId}`}
+              href={`/courses/learn/${courseId}/watch?lessonId=${lessonId}`}
               className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
             >
               <Play size={16} />
@@ -51,4 +52,3 @@ export function YouTubeVideoPlayer({
     </>
   );
 }
-
