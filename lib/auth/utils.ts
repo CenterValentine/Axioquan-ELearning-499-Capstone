@@ -116,3 +116,21 @@ export async function requireAnyRole(roles: string[]) {
   return session;
 }
 
+/**
+ * Get user ID + roles from session
+ */
+export async function getUserRoles() {
+  const session = await getSession();
+
+  if (!session) {
+    throw new Error("User not authenticated");
+  }
+
+  return {
+    id: session.userId,
+    email: session.email || null,
+    name: session.name || null,
+    roles: session.roles || [],
+  };
+}
+
