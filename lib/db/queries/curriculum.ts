@@ -1,6 +1,7 @@
 // /lib/db/queries/curriculum.ts
 
 import { sql } from "../index";
+import { getCourseById } from "./courses";
 
 export interface Module {
   id: string;
@@ -702,5 +703,96 @@ export async function deleteLesson(
       message: "Failed to delete lesson",
       errors: [error.message || "An unexpected error occurred"],
     };
+  }
+}
+
+/**
+ * Add curriculum (modules and lessons) to a course
+ */
+export async function addCurriculum(
+  courseId: string,
+  body: {
+    modules?: Array<{
+      title: string;
+      description?: string;
+      order_index?: number;
+      is_published?: boolean;
+      is_preview_available?: boolean;
+      is_required?: boolean;
+      estimated_duration?: number;
+      learning_objectives?: string[];
+      key_concepts?: string[];
+      lessons?: Array<{
+        title: string;
+        description?: string;
+        lesson_type: string;
+        content_type?: string;
+        difficulty?: string;
+        order_index?: number;
+        is_published?: boolean;
+        is_preview?: boolean;
+      }>;
+    }>;
+  }
+): Promise<{
+  course_title: string;
+  course_slug: string;
+}> {
+  try {
+    // Get course info
+    const course = await getCourseById(courseId);
+    if (!course) {
+      throw new Error("Course not found");
+    }
+
+    // Create modules and lessons if provided
+    if (body.modules && Array.isArray(body.modules)) {
+      for (const moduleData of body.modules) {
+        // Create module
+        const moduleResult = await createModule({
+          course_id: courseId,
+          title: moduleData.title,
+          description: moduleData.description,
+          order_index: moduleData.order_index,
+          is_published: moduleData.is_published ?? true,
+          is_preview_available: moduleData.is_preview_available,
+          is_required: moduleData.is_required,
+          estimated_duration: moduleData.estimated_duration,
+          learning_objectives: moduleData.learning_objectives,
+          key_concepts: moduleData.key_concepts,
+        });
+
+        if (!moduleResult.success || !moduleResult.module) {
+          console.error("Failed to create module:", moduleResult.errors);
+          continue;
+        }
+
+        // Create lessons for this module if provided
+        if (moduleData.lessons && Array.isArray(moduleData.lessons)) {
+          for (const lessonData of moduleData.lessons) {
+            await createLesson({
+              module_id: moduleResult.module.id,
+              course_id: courseId,
+              title: lessonData.title,
+              description: lessonData.description,
+              lesson_type: lessonData.lesson_type,
+              content_type: lessonData.content_type,
+              difficulty: lessonData.difficulty,
+              order_index: lessonData.order_index,
+              is_published: lessonData.is_published ?? true,
+              is_preview: lessonData.is_preview ?? false,
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      course_title: course.title,
+      course_slug: course.slug,
+    };
+  } catch (error: any) {
+    console.error("❌ Error adding curriculum:", error);
+    throw error;
   }
 }
