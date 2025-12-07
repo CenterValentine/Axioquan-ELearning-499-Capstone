@@ -322,14 +322,14 @@ function AutoSlider({ isAuthenticated }: { isAuthenticated: boolean }) {
       link: isAuthenticated ? "/dashboard/request-upgrade" : "/signup" // this 
       
     },
-    {
-      id: 3,
-      title: 'Premium Membership',
-      description: 'Unlimited access to all courses + certificates',
-      cta: 'Upgrade Now',
-      image: '/images/ios-swift-development.jpg',
-      link: '/premium'
-    },
+    // {
+    //   id: 3,
+    //   title: 'Premium Membership',
+    //   description: 'Unlimited access to all courses + certificates',
+    //   cta: 'Upgrade Now',
+    //   image: '/images/ios-swift-development.jpg',
+    //   link: '/premium'
+    // },
     // {
     //   id: 4,
     //   title: 'Learn at Your Own Pace',
@@ -339,21 +339,21 @@ function AutoSlider({ isAuthenticated }: { isAuthenticated: boolean }) {
     //   link: '/courses'
     // },
     {
-      id: 5,
-      title: 'Expert Instructors',
-      description: 'Learn from industry professionals and thought leaders',
-      cta: 'Meet Instructors',
-      image: '/images/ios-development.png',
-      link: '/instructors'
+     id: 5,
+    title: 'Expert Instructors',
+    description: 'Learn from industry professionals and thought leaders',
+    cta: 'Meet Instructors',
+    image: '/images/ios-development.png',
+    link: '/instructors' 
     },
-    {
-      id: 6,
-      title: 'Career Advancement',
-      description: 'Get certified and boost your career opportunities',
-      cta: 'View Certificates',
-      image: '/images/instructor-portrait.png',
-      link: '/certificates'
-    },
+    // {
+    //   id: 6,
+    //   title: 'Career Advancement',
+    //   description: 'Get certified and boost your career opportunities',
+    //   cta: 'View Certificates',
+    //   image: '/images/instructor-portrait.png',
+    //   link: '/certificates'
+    // },
   ];
 
   useEffect(() => {
@@ -646,3 +646,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+
