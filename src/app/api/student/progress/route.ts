@@ -1,58 +1,61 @@
+
 // /app/api/student/progress/route.ts
 
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { getEnrollmentProgressAction } from "@/lib/courses/progress-actions";
+import { NextRequest } from 'next/server'
+import { getSession } from '@/lib/auth/session'
 
-/**
- * GET - Get updated enrollment progress for all enrolled courses
- * Returns a map of courseId -> progress percentage
- */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-
+    const session = await getSession()
+    
     if (!session || !session.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const result = await getEnrollmentProgressAction();
-
-    if (!result.success) {
-      return NextResponse.json(
+    // Mock data - replace with actual database queries later
+    const progressData = {
+      coursesInProgress: 3,
+      hoursLearned: 24,
+      certificatesEarned: 2,
+      currentStreak: 7,
+      weeklyGoal: { completed: 5, target: 7 },
+      courses: [
         {
-          error: "Failed to get enrollment progress",
-          errors: result.errors || [],
+          id: 1,
+          title: "Introduction to Python Programming",
+          category: "Programming",
+          progress: 85,
+          lastUpdated: "2 days ago",
+          nextLesson: "Advanced Functions",
         },
-        { status: 400 }
-      );
+        {
+          id: 2,
+          title: "Modern Web Design Principles",
+          category: "Design",
+          progress: 60,
+          lastUpdated: "Today",
+          nextLesson: "Responsive Design",
+        },
+        {
+          id: 3,
+          title: "Data Structures and Algorithms",
+          category: "Programming",
+          progress: 25,
+          lastUpdated: "5 days ago",
+          nextLesson: "Linked Lists",
+        },
+      ],
+      achievements: [
+        { id: 1, name: "Python Basics", icon: "🐍", description: "Completed Python fundamentals module" },
+        { id: 2, name: "Quiz Master", icon: "🏆", description: "Scored 100% on 5 quizzes" },
+        { id: 3, name: "Week Warrior", icon: "⚡", description: "Learned 7 days in a row" },
+      ]
     }
 
-    // Convert Map to object for JSON serialization
-    const progressObject: Record<string, number> = {};
-    if (result.progress) {
-      result.progress.forEach((value, key) => {
-        progressObject[key] = value;
-      });
-    }
+    return Response.json(progressData)
 
-    return NextResponse.json({
-      success: true,
-      progress: progressObject,
-    });
-  } catch (error: any) {
-    console.error("API Error getting enrollment progress:", error);
-
-    if (error.message?.includes("unauthorized")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        details: error?.message || "Unknown error",
-      },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error('Student progress API error:', error)
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -5,6 +5,7 @@ import { NextRequest } from 'next/server';
 import { getCourseByIdAction, updateCourseAction, deleteCourseAction } from '@/lib/courses/actions';
 import { requireRole } from '@/lib/auth/utils';
 
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
