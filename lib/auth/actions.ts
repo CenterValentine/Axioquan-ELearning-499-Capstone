@@ -13,6 +13,13 @@ import { randomBytes } from 'crypto';
 import { sendEmail } from '@/lib/email/utils';
 import { createPasswordResetEmail } from '@/lib/email/templates/password-reset';
 
+/*import { notifyUserRegistration } from "@/lib/notifications/actions";
+
+await notifyUserRegistration({
+  id: newUser.id,
+  email: newUser.email
+});*/
+
 
 /**
  * Handles secure user signup with optional role parameter

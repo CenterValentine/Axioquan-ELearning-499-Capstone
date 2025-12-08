@@ -35,62 +35,10 @@ export default function InboxPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<"all" | "unread" | "read">("all")
   const [filterCategory, setFilterCategory] = useState<string>("all")
+const [messageInput, setMessageInput] = useState("")
 
-  const notifications: Notification[] = [
-    {
-      id: "1",
-      type: "assignment",
-      title: "New Assignment Posted",
-      message: "React Hooks Assignment has been posted for Advanced React Masterclass",
-      course: "Advanced React Masterclass",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: false,
-    },
-    {
-      id: "2",
-      type: "achievement",
-      title: "Achievement Unlocked",
-      message: 'You earned the "React Master" badge by completing 5 React courses',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      read: false,
-    },
-    {
-      id: "3",
-      type: "message",
-      title: "Message from Instructor",
-      message: "Great work on your recent quiz! Keep it up!",
-      course: "Python for Data Science",
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-    {
-      id: "4",
-      type: "deadline",
-      title: "Approaching Deadline",
-      message: "2 days left to submit your UI/UX Design project",
-      course: "UI/UX Design Fundamentals",
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-    {
-      id: "5",
-      type: "certificate",
-      title: "Certificate Ready",
-      message: "Your certificate for JavaScript Basics is ready to download",
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-    {
-      id: "6",
-      type: "announcement",
-      title: "Platform Announcement",
-      message: "We are launching new mobile app features next week",
-      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-  ]
-
-  const directMessages: DirectMessage[] = [
+  // New conversations and messages
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([
     {
       id: "1",
       sender: "Sarah Anderson",
@@ -99,17 +47,9 @@ export default function InboxPage() {
       timestamp: new Date(Date.now() - 30 * 60 * 1000),
       unread: true,
       messages: [
-        {
-          sender: "Sarah Anderson",
-          content: "Hi! I wanted to review your assignment",
-          timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        },
+        { sender: "Sarah Anderson", content: "Hi! I wanted to review your assignment", timestamp: new Date(Date.now() - 60 * 60 * 1000) },
         { sender: "You", content: "When would be a good time?", timestamp: new Date(Date.now() - 45 * 60 * 1000) },
-        {
-          sender: "Sarah Anderson",
-          content: "Great work on the recent assignment!",
-          timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        },
+        { sender: "Sarah Anderson", content: "Great work on the recent assignment!", timestamp: new Date(Date.now() - 30 * 60 * 1000) },
       ],
     },
     {
@@ -130,7 +70,101 @@ export default function InboxPage() {
       unread: false,
       messages: [],
     },
-  ]
+  ])
+
+  const handleSendMessage = async () => {
+  if (!messageInput.trim() || !selectedConversation) return;
+
+  try {
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        receiverId: selectedConversation, // user id or conversation
+        message: messageInput,
+        courseId: null // if it has associated courses
+      })
+    });
+
+    if (!res.ok) throw new Error("Failed to send message");
+
+    const data = await res.json();
+
+    // Insert the new message into the conversation
+    setDirectMessages((prev) =>
+      prev.map((conv) =>
+        conv.id === selectedConversation
+          ? { ...conv, messages: [...conv.messages, { sender: "You", content: messageInput, timestamp: new Date() }] }
+          : conv
+      )
+    );
+
+    setMessageInput(""); // clear input
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+  const notifications: Notification[] = [
+  {
+    id: "1",
+    type: "assignment",
+    title: "New Assignment Posted",
+    message: "React Hooks Assignment has been posted for Advanced React Masterclass",
+    course: "Advanced React Masterclass",
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    read: false,
+    actionUrl: "/dashboard/my-courses/react-hooks-assignment",
+  },
+  {
+    id: "2",
+    type: "achievement",
+    title: "Achievement Unlocked",
+    message: 'You earned the "React Master" badge by completing 5 React courses',
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
+    read: false,
+    actionUrl: "/dashboard/profile/achievements",
+  },
+  {
+    id: "3",
+    type: "message",
+    title: "Message from Instructor",
+    message: "Great work on your recent quiz! Keep it up!",
+    course: "Python for Data Science",
+    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/dashboard/messages/[id]",
+  },
+  {
+    id: "4",
+    type: "deadline",
+    title: "Approaching Deadline",
+    message: "2 days left to submit your UI/UX Design project",
+    course: "UI/UX Design Fundamentals",
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/dashboard/my-courses/approaching-deadline",
+  },
+  {
+    id: "5",
+    type: "certificate",
+    title: "Certificate Ready",
+    message: "Your certificate for JavaScript Basics is ready to download",
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/dashboard/certificates",
+  },
+  {
+    id: "6",
+    type: "announcement",
+    title: "Platform Announcement",
+    message: "We are launching new mobile app features next week",
+    timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+    read: true,
+    actionUrl: "/dashboard/announcements",
+  },
+]
+
 
   const filteredNotifications = notifications.filter((notif) => {
     const matchesSearch =
@@ -285,18 +319,13 @@ export default function InboxPage() {
                     {filteredNotifications.map((notif) => (
                       <button
                         key={notif.id}
-                        className={`w-full text-left p-4 hover:bg-gray-50 transition border-l-4 ${
-                          notif.read ? "border-transparent" : "border-blue-500"
-                        }`}
+                        onClick={() => { if (notif.actionUrl) window.location.href = notif.actionUrl; notif.read = true }}
+                        className={`w-full text-left p-4 hover:bg-gray-50 transition border-l-4 ${notif.read ? "border-transparent" : "border-blue-500"}`}
                       >
                         <div className="flex gap-3">
                           <div className="flex-shrink-0 mt-1">{getNotificationIcon(notif.type)}</div>
                           <div className="flex-1 min-w-0">
-                            <p
-                              className={`font-semibold truncate ${notif.read ? "text-gray-500" : "text-gray-900"}`}
-                            >
-                              {notif.title}
-                            </p>
+                            <p className={`font-semibold truncate ${notif.read ? "text-gray-500" : "text-gray-900"}`}>{notif.title}</p>
                             <p className="text-sm text-gray-600 truncate">{notif.message}</p>
                             {notif.course && <p className="text-xs text-blue-600 mt-1">{notif.course}</p>}
                             <p className="text-xs text-gray-500 mt-1">{formatTime(notif.timestamp)}</p>
@@ -307,38 +336,30 @@ export default function InboxPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <p>No notifications yet</p>
-                  </div>
+                  <div className="flex items-center justify-center h-full text-gray-500"><p>No notifications yet</p></div>
                 )
-              ) : directMessages.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {directMessages.map((msg) => (
-                    <button
-                      key={msg.id}
-                      onClick={() => setSelectedConversation(msg.id)}
-                      className={`w-full text-left p-4 hover:bg-gray-50 transition border-l-4 ${
-                        msg.unread ? "border-blue-500 bg-blue-50" : "border-transparent"
-                      }`}
-                    >
-                      <div className="flex gap-3">
-                        <div className="text-2xl flex-shrink-0">{msg.senderAvatar}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-semibold ${msg.unread ? "text-gray-900" : "text-gray-500"}`}>
-                            {msg.sender}
-                          </p>
-                          <p className="text-sm text-gray-600 truncate">{msg.preview}</p>
-                          <p className="text-xs text-gray-500 mt-1">{formatTime(msg.timestamp)}</p>
-                        </div>
-                        {msg.unread && <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500" />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  <p>No messages yet</p>
-                </div>
+                directMessages.length > 0 ? (
+                  <div className="divide-y divide-gray-200">
+                    {directMessages.map((msg) => (
+                      <button
+                        key={msg.id}
+                        onClick={() => setSelectedConversation(msg.id)}
+                        className={`w-full text-left p-4 hover:bg-gray-50 transition border-l-4 ${msg.unread ? "border-blue-500 bg-blue-50" : "border-transparent"}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className="text-2xl flex-shrink-0">{msg.senderAvatar}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-semibold ${msg.unread ? "text-gray-900" : "text-gray-500"}`}>{msg.sender}</p>
+                            <p className="text-sm text-gray-600 truncate">{msg.preview}</p>
+                            <p className="text-xs text-gray-500 mt-1">{formatTime(msg.timestamp)}</p>
+                          </div>
+                          {msg.unread && <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : <div className="flex items-center justify-center h-full text-gray-500"><p>No messages yet</p></div>
               )}
             </div>
           </div>
@@ -384,15 +405,22 @@ export default function InboxPage() {
                     </div>
 
                     {/* Message Input */}
-                    <div className="bg-white border-t border-gray-200 p-4 flex gap-2">
+                  <div className="bg-white border-t border-gray-200 p-4 flex gap-2">
                       <input
-                        type="text"
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      type="text"
+                      placeholder="Type a message..."
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
-                      <button className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition font-semibold">
-                        Send
-                      </button>
+
+                      <button
+                      onClick={handleSendMessage}
+                      className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition font-semibold"
+                      >
+                     Send
+                    </ button>
                     </div>
                   </>
                 ) : null
