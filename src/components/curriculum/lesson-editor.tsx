@@ -1,16 +1,24 @@
-
 // /components/curriculum/lesson-editor.tsx
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { FileUpload } from '@/components/courses/file-upload';
-import { Lesson } from '@/lib/db/queries/curriculum';
+import { useState, useRef, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { FileUpload } from "@/components/courses/file-upload";
+import { Lesson } from "@/lib/db/queries/curriculum";
+import { CodeEnvironment, TestCase } from "@/lib/code/types";
+import { QuizData, QuizQuestion } from "@/types/quiz";
+import { Plus, Trash2, GripVertical } from "lucide-react";
 
 interface LessonEditorProps {
   lesson: Lesson;
@@ -19,63 +27,131 @@ interface LessonEditorProps {
 }
 
 const lessonTypes = [
-  { value: 'video', label: 'Video', icon: '🎥' },
-  { value: 'text', label: 'Text', icon: '📝' },
-  { value: 'document', label: 'Document', icon: '📄' },
-  { value: 'quiz', label: 'Quiz', icon: '❓' },
-  { value: 'assignment', label: 'Assignment', icon: '📋' },
-  { value: 'live_session', label: 'Live Session', icon: '🔴' },
-  { value: 'audio', label: 'Audio', icon: '🎧' },
-  { value: 'interactive', label: 'Interactive', icon: '⚡' },
-  { value: 'code', label: 'Code', icon: '💻' },
-  { value: 'discussion', label: 'Discussion', icon: '💬' }
+  { value: "video", label: "Video", icon: "🎥" },
+  { value: "text", label: "Text", icon: "📝" },
+  { value: "document", label: "Document", icon: "📄" },
+  { value: "quiz", label: "Quiz", icon: "❓" },
+  { value: "assignment", label: "Assignment", icon: "📋" },
+  { value: "live_session", label: "Live Session", icon: "🔴" },
+  { value: "audio", label: "Audio", icon: "🎧" },
+  { value: "interactive", label: "Interactive", icon: "⚡" },
+  { value: "code", label: "Code", icon: "💻" },
+  { value: "discussion", label: "Discussion", icon: "💬" },
 ];
 
 const difficultyLevels = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' }
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
 ];
 
 export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
+  // Parse code_environment if it exists
+  const initialCodeEnv: CodeEnvironment | null = lesson.code_environment
+    ? typeof lesson.code_environment === "string"
+      ? JSON.parse(lesson.code_environment)
+      : lesson.code_environment
+    : null;
+
+  // Parse interactive_content (quiz data) if it exists
+  const initialQuizData: QuizData | null = lesson.interactive_content
+    ? typeof lesson.interactive_content === "string"
+      ? JSON.parse(lesson.interactive_content)
+      : lesson.interactive_content
+    : null;
+
   const [formData, setFormData] = useState({
     title: lesson.title,
-    description: lesson.description || '',
+    description: lesson.description || "",
     lesson_type: lesson.lesson_type,
     difficulty: lesson.difficulty,
-    video_url: lesson.video_url || '',
+    video_url: lesson.video_url || "",
     video_duration: lesson.video_duration || 0,
-    document_url: lesson.document_url || '',
-    content_html: lesson.content_html || '',
+    video_thumbnail: lesson.video_thumbnail || "",
+    document_url: lesson.document_url || "",
+    document_type: lesson.document_type || "",
+    content_html: lesson.content_html || "",
+    code_environment: initialCodeEnv,
+    interactive_content: initialQuizData,
+    passing_score: lesson.passing_score || 70,
+    requires_passing_grade: lesson.requires_passing_grade || false,
     is_published: lesson.is_published,
-    is_preview: lesson.is_preview
+    is_preview: lesson.is_preview,
   });
   const [loading, setLoading] = useState(false);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false);
+
+  // Use refs to track upload state for polling (since state updates are async)
+  const videoUploadingRef = useRef(false);
+  const documentUploadingRef = useRef(false);
+
+  // Sync refs with state
+  useEffect(() => {
+    videoUploadingRef.current = isVideoUploading;
+  }, [isVideoUploading]);
+
+  useEffect(() => {
+    documentUploadingRef.current = isDocumentUploading;
+  }, [isDocumentUploading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       return;
     }
 
+    // Option 2: Wait for any in-progress uploads before submitting
+    if (isVideoUploading || isDocumentUploading) {
+      // Wait for uploads to complete (poll every 100ms, max 60 seconds)
+      const maxWaitTime = 60000; // 60 seconds
+      const pollInterval = 100;
+      const startTime = Date.now();
+
+      while (
+        (videoUploadingRef.current || documentUploadingRef.current) &&
+        Date.now() - startTime < maxWaitTime
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      }
+
+      // If still uploading after timeout, show warning but continue
+      if (videoUploadingRef.current || documentUploadingRef.current) {
+        console.warn("Upload timeout - proceeding with submission");
+      }
+    }
+
     setLoading(true);
     try {
-      await onSave(formData);
+      // Prepare data for saving - stringify JSON fields if they exist
+      const saveData = {
+        ...formData,
+        code_environment: formData.code_environment
+          ? JSON.stringify(formData.code_environment)
+          : null,
+        interactive_content: formData.interactive_content
+          ? JSON.stringify(formData.interactive_content)
+          : null,
+      };
+      await onSave(saveData);
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const getCurrentLessonType = () => {
-    return lessonTypes.find(type => type.value === formData.lesson_type) || lessonTypes[0];
+    return (
+      lessonTypes.find((type) => type.value === formData.lesson_type) ||
+      lessonTypes[0]
+    );
   };
 
   return (
@@ -91,29 +167,37 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Basic Information</h3>
-            
+
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label htmlFor="title" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="title"
+                  className="block text-sm font-medium mb-1"
+                >
                   Lesson Title *
                 </label>
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
                   placeholder="e.g., Introduction to React Components"
                   required
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="description" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium mb-1"
+                >
                   Description
                 </label>
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
                   placeholder="Brief description of what students will learn in this lesson"
                   rows={3}
                 />
@@ -124,37 +208,59 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
           {/* Lesson Type & Settings */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Lesson Type & Settings</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="lesson_type" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="lesson_type"
+                  className="block text-sm font-medium mb-1"
+                >
                   Lesson Type
                 </label>
                 <select
                   id="lesson_type"
                   value={formData.lesson_type}
-                  onChange={(e) => handleInputChange('lesson_type', e.target.value)}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    handleInputChange("lesson_type", newType);
+                    // Initialize code_environment when switching to code type
+                    if (newType === "code" && !formData.code_environment) {
+                      handleInputChange("code_environment", {
+                        language: "javascript",
+                        instructions: "",
+                        starterCode: "",
+                        testCases: [],
+                        allowRun: true,
+                        allowSubmit: true,
+                      });
+                    }
+                  }}
                   className="w-full p-2 border rounded-md"
                 >
-                  {lessonTypes.map(type => (
+                  {lessonTypes.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.icon} {type.label}
                     </option>
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label htmlFor="difficulty" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="difficulty"
+                  className="block text-sm font-medium mb-1"
+                >
                   Difficulty Level
                 </label>
                 <select
                   id="difficulty"
                   value={formData.difficulty}
-                  onChange={(e) => handleInputChange('difficulty', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("difficulty", e.target.value)
+                  }
                   className="w-full p-2 border rounded-md"
                 >
-                  {difficultyLevels.map(level => (
+                  {difficultyLevels.map((level) => (
                     <option key={level.value} value={level.value}>
                       {level.label}
                     </option>
@@ -169,20 +275,24 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
                   type="checkbox"
                   id="is_published"
                   checked={formData.is_published}
-                  onChange={(e) => handleInputChange('is_published', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("is_published", e.target.checked)
+                  }
                   className="rounded"
                 />
                 <label htmlFor="is_published" className="text-sm font-medium">
                   Published
                 </label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   id="is_preview"
                   checked={formData.is_preview}
-                  onChange={(e) => handleInputChange('is_preview', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("is_preview", e.target.checked)
+                  }
                   className="rounded"
                 />
                 <label htmlFor="is_preview" className="text-sm font-medium">
@@ -195,102 +305,1085 @@ export function LessonEditor({ lesson, onSave, onCancel }: LessonEditorProps) {
           {/* Content Based on Lesson Type */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Lesson Content</h3>
-            
+
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center space-x-2 mb-2">
                 <Badge variant="default" className="bg-blue-100 text-blue-800">
                   {getCurrentLessonType().icon} {getCurrentLessonType().label}
                 </Badge>
                 <span className="text-sm text-blue-700">
-                  Configure {getCurrentLessonType().label.toLowerCase()} content below
+                  Configure {getCurrentLessonType().label.toLowerCase()} content
+                  below
                 </span>
               </div>
             </div>
 
-            {formData.lesson_type === 'video' && (
+            {formData.lesson_type === "video" && (
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Video Content
                 </label>
                 <FileUpload
                   value={formData.video_url}
-                  onChange={(url) => handleInputChange('video_url', url)}
+                  onChange={(url) => handleInputChange("video_url", url)}
+                  onUploadStateChange={(uploading) =>
+                    setIsVideoUploading(uploading)
+                  }
                   onUploadComplete={(meta) => {
                     if (meta.duration) {
-                      handleInputChange('video_duration', Math.round(meta.duration));
+                      handleInputChange(
+                        "video_duration",
+                        Math.round(meta.duration)
+                      );
+                    }
+                    if (meta.thumbnail) {
+                      handleInputChange("video_thumbnail", meta.thumbnail);
                     }
                   }}
                   type="video"
                   description="Upload a video file or paste a video URL"
                 />
-                
+
                 {formData.video_duration > 0 && (
                   <div className="mt-2 text-sm text-gray-600">
-                    Video duration: {Math.round(formData.video_duration / 60)} minutes
+                    Video duration: {Math.round(formData.video_duration / 60)}{" "}
+                    minutes
                   </div>
                 )}
               </div>
             )}
 
-            {formData.lesson_type === 'document' && (
+            {formData.lesson_type === "document" && (
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Document File
                 </label>
                 <FileUpload
                   value={formData.document_url}
-                  onChange={(url) => handleInputChange('document_url', url)}
+                  onChange={(url) => handleInputChange("document_url", url)}
+                  onUploadStateChange={(uploading) =>
+                    setIsDocumentUploading(uploading)
+                  }
+                  onUploadComplete={(meta) => {
+                    // Save document_type from MIME type when document is uploaded
+                    if (meta.mimeType) {
+                      handleInputChange("document_type", meta.mimeType);
+                    }
+                  }}
                   type="document"
                   description="Upload PDF, Word, PowerPoint, or other document files"
                 />
               </div>
             )}
 
-            {(formData.lesson_type === 'text' || formData.lesson_type === 'discussion') && (
+            {(formData.lesson_type === "text" ||
+              formData.lesson_type === "discussion") && (
               <div>
-                <label htmlFor="content_html" className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="content_html"
+                  className="block text-sm font-medium mb-1"
+                >
                   Content
                 </label>
                 <Textarea
                   id="content_html"
                   value={formData.content_html}
-                  onChange={(e) => handleInputChange('content_html', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("content_html", e.target.value)
+                  }
                   placeholder="Write your lesson content here. You can use basic HTML formatting."
                   rows={10}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Supports basic HTML tags: &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;li&gt;, &lt;br&gt;
+                  Supports basic HTML tags: &lt;p&gt;, &lt;strong&gt;,
+                  &lt;em&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;li&gt;, &lt;br&gt;
                 </p>
               </div>
             )}
 
-            {formData.lesson_type === 'quiz' && (
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-yellow-800">
-                  Quiz functionality coming soon! For now, you can describe the quiz in the description field.
-                </p>
+            {formData.lesson_type === "quiz" && (
+              <div className="space-y-4">
+                {/* Quiz Configuration */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Time Limit (minutes)
+                    </label>
+                    <Input
+                      type="number"
+                      value={
+                        formData.interactive_content?.timeLimit
+                          ? Math.floor(
+                              formData.interactive_content.timeLimit / 60
+                            )
+                          : 30
+                      }
+                      onChange={(e) => {
+                        const minutes = parseInt(e.target.value) || 30;
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          timeLimit: minutes * 60,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                          questions:
+                            formData.interactive_content?.questions || [],
+                          allowRetake:
+                            formData.interactive_content?.allowRetake ?? false,
+                          showResultsImmediately:
+                            formData.interactive_content
+                              ?.showResultsImmediately ?? true,
+                        });
+                      }}
+                      min="1"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Passing Score (%)
+                    </label>
+                    <Input
+                      type="number"
+                      value={formData.passing_score}
+                      onChange={(e) => {
+                        const score = parseInt(e.target.value) || 70;
+                        handleInputChange("passing_score", score);
+                        handleInputChange("requires_passing_grade", score > 0);
+                      }}
+                      min="0"
+                      max="100"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.interactive_content?.allowRetake ?? false
+                      }
+                      onChange={(e) =>
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          allowRetake: e.target.checked,
+                          timeLimit:
+                            formData.interactive_content?.timeLimit || 1800,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                          questions:
+                            formData.interactive_content?.questions || [],
+                          showResultsImmediately:
+                            formData.interactive_content
+                              ?.showResultsImmediately ?? true,
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <span className="text-sm font-medium">Allow Retake</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={
+                        formData.interactive_content?.showResultsImmediately ??
+                        true
+                      }
+                      onChange={(e) =>
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          showResultsImmediately: e.target.checked,
+                          timeLimit:
+                            formData.interactive_content?.timeLimit || 1800,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                          questions:
+                            formData.interactive_content?.questions || [],
+                          allowRetake:
+                            formData.interactive_content?.allowRetake ?? false,
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Show Results Immediately
+                    </span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Quiz Instructions (optional)
+                  </label>
+                  <Textarea
+                    value={formData.interactive_content?.instructions || ""}
+                    onChange={(e) =>
+                      handleInputChange("interactive_content", {
+                        ...formData.interactive_content,
+                        instructions: e.target.value,
+                        timeLimit:
+                          formData.interactive_content?.timeLimit || 1800,
+                        passingScore:
+                          formData.interactive_content?.passingScore || 70,
+                        questions:
+                          formData.interactive_content?.questions || [],
+                      })
+                    }
+                    placeholder="Additional instructions for students taking this quiz..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Questions Builder */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">
+                      Questions
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newQuestion: QuizQuestion = {
+                          id: `q-${Date.now()}`,
+                          type: "multiple-choice",
+                          question: "",
+                          points: 10,
+                          order:
+                            (formData.interactive_content?.questions?.length ||
+                              0) + 1,
+                          options: ["", "", "", ""],
+                          correctAnswer: 0,
+                        };
+                        handleInputChange("interactive_content", {
+                          ...formData.interactive_content,
+                          questions: [
+                            ...(formData.interactive_content?.questions || []),
+                            newQuestion,
+                          ],
+                          timeLimit:
+                            formData.interactive_content?.timeLimit || 1800,
+                          passingScore:
+                            formData.interactive_content?.passingScore || 70,
+                        });
+                      }}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Question
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {(formData.interactive_content?.questions || []).map(
+                      (question, index) => (
+                        <div
+                          key={question.id}
+                          className="p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-900"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">
+                              Question {index + 1}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updated =
+                                    formData.interactive_content?.questions?.filter(
+                                      (_, i) => i !== index
+                                    ) || [];
+                                  // Reorder questions
+                                  updated.forEach((q, i) => {
+                                    q.order = i + 1;
+                                  });
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Question Type
+                            </label>
+                            <select
+                              value={question.type}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...(formData.interactive_content?.questions ||
+                                    []),
+                                ];
+                                updated[index] = {
+                                  ...updated[index],
+                                  type: e.target.value as QuizQuestion["type"],
+                                  // Reset options for non-multiple-choice types
+                                  options:
+                                    e.target.value === "multiple-choice" ||
+                                    e.target.value === "true-false"
+                                      ? updated[index].options ||
+                                        (e.target.value === "true-false"
+                                          ? ["True", "False"]
+                                          : ["", "", "", ""])
+                                      : undefined,
+                                  correctAnswer:
+                                    e.target.value === "true-false"
+                                      ? 0
+                                      : undefined,
+                                };
+                                handleInputChange("interactive_content", {
+                                  ...formData.interactive_content,
+                                  questions: updated,
+                                  timeLimit:
+                                    formData.interactive_content?.timeLimit ||
+                                    1800,
+                                  passingScore:
+                                    formData.interactive_content
+                                      ?.passingScore || 70,
+                                });
+                              }}
+                              className="w-full p-2 border rounded-md text-sm"
+                            >
+                              <option value="multiple-choice">
+                                Multiple Choice
+                              </option>
+                              <option value="true-false">True/False</option>
+                              <option value="short-answer">Short Answer</option>
+                              <option value="essay">Essay</option>
+                              <option value="code">Code</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Question Text *
+                            </label>
+                            <Textarea
+                              value={question.question}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...(formData.interactive_content?.questions ||
+                                    []),
+                                ];
+                                updated[index] = {
+                                  ...updated[index],
+                                  question: e.target.value,
+                                };
+                                handleInputChange("interactive_content", {
+                                  ...formData.interactive_content,
+                                  questions: updated,
+                                  timeLimit:
+                                    formData.interactive_content?.timeLimit ||
+                                    1800,
+                                  passingScore:
+                                    formData.interactive_content
+                                      ?.passingScore || 70,
+                                });
+                              }}
+                              placeholder="Enter your question here..."
+                              rows={2}
+                              className="text-sm"
+                              required
+                            />
+                          </div>
+
+                          {(question.type === "multiple-choice" ||
+                            question.type === "true-false") && (
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Options *
+                              </label>
+                              <div className="space-y-2">
+                                {question.options?.map((option, optIndex) => (
+                                  <div
+                                    key={optIndex}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`correct-${question.id}`}
+                                      checked={
+                                        question.correctAnswer === optIndex
+                                      }
+                                      onChange={() => {
+                                        const updated = [
+                                          ...(formData.interactive_content
+                                            ?.questions || []),
+                                        ];
+                                        updated[index] = {
+                                          ...updated[index],
+                                          correctAnswer: optIndex,
+                                        };
+                                        handleInputChange(
+                                          "interactive_content",
+                                          {
+                                            ...formData.interactive_content,
+                                            questions: updated,
+                                            timeLimit:
+                                              formData.interactive_content
+                                                ?.timeLimit || 1800,
+                                            passingScore:
+                                              formData.interactive_content
+                                                ?.passingScore || 70,
+                                          }
+                                        );
+                                      }}
+                                      className="rounded"
+                                    />
+                                    <Input
+                                      value={option}
+                                      onChange={(e) => {
+                                        const updated = [
+                                          ...(formData.interactive_content
+                                            ?.questions || []),
+                                        ];
+                                        const updatedOptions = [
+                                          ...(updated[index].options || []),
+                                        ];
+                                        updatedOptions[optIndex] =
+                                          e.target.value;
+                                        updated[index] = {
+                                          ...updated[index],
+                                          options: updatedOptions,
+                                        };
+                                        handleInputChange(
+                                          "interactive_content",
+                                          {
+                                            ...formData.interactive_content,
+                                            questions: updated,
+                                            timeLimit:
+                                              formData.interactive_content
+                                                ?.timeLimit || 1800,
+                                            passingScore:
+                                              formData.interactive_content
+                                                ?.passingScore || 70,
+                                          }
+                                        );
+                                      }}
+                                      placeholder={`Option ${optIndex + 1}`}
+                                      className="text-sm"
+                                    />
+                                  </div>
+                                ))}
+                                {question.type === "multiple-choice" && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = [
+                                        ...(formData.interactive_content
+                                          ?.questions || []),
+                                      ];
+                                      updated[index] = {
+                                        ...updated[index],
+                                        options: [
+                                          ...(updated[index].options || []),
+                                          "",
+                                        ],
+                                      };
+                                      handleInputChange("interactive_content", {
+                                        ...formData.interactive_content,
+                                        questions: updated,
+                                        timeLimit:
+                                          formData.interactive_content
+                                            ?.timeLimit || 1800,
+                                        passingScore:
+                                          formData.interactive_content
+                                            ?.passingScore || 70,
+                                      });
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add Option
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {(question.type === "short-answer" ||
+                            question.type === "code") && (
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Correct Answer (optional - for auto-grading)
+                              </label>
+                              <Input
+                                value={(question.correctAnswer as string) || ""}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.interactive_content
+                                      ?.questions || []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    correctAnswer: e.target.value,
+                                  };
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                placeholder="Expected answer (case-sensitive)"
+                                className="text-sm"
+                              />
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Points *
+                              </label>
+                              <Input
+                                type="number"
+                                value={question.points}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.interactive_content
+                                      ?.questions || []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    points: parseInt(e.target.value) || 10,
+                                  };
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                min="1"
+                                className="text-sm"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Explanation (shown after quiz)
+                              </label>
+                              <Input
+                                value={question.explanation || ""}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.interactive_content
+                                      ?.questions || []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    explanation: e.target.value,
+                                  };
+                                  handleInputChange("interactive_content", {
+                                    ...formData.interactive_content,
+                                    questions: updated,
+                                    timeLimit:
+                                      formData.interactive_content?.timeLimit ||
+                                      1800,
+                                    passingScore:
+                                      formData.interactive_content
+                                        ?.passingScore || 70,
+                                  });
+                                }}
+                                placeholder="Optional explanation"
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {(!formData.interactive_content?.questions ||
+                      formData.interactive_content.questions.length === 0) && (
+                      <div className="text-center py-8 text-sm text-gray-500 border border-dashed rounded-lg">
+                        No questions added yet. Click "Add Question" to create
+                        one.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
-            {formData.lesson_type === 'assignment' && (
+            {formData.lesson_type === "assignment" && (
               <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
                 <p className="text-orange-800">
-                  Assignment functionality coming soon! For now, you can describe the assignment in the description field.
+                  Assignment functionality coming soon! For now, you can
+                  describe the assignment in the description field.
                 </p>
+              </div>
+            )}
+
+            {formData.lesson_type === "code" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Programming Language *
+                    </label>
+                    <select
+                      value={
+                        formData.code_environment?.language || "javascript"
+                      }
+                      onChange={(e) =>
+                        handleInputChange("code_environment", {
+                          ...formData.code_environment,
+                          language: e.target.value,
+                          instructions:
+                            formData.code_environment?.instructions || "",
+                          starterCode:
+                            formData.code_environment?.starterCode || "",
+                          testCases: formData.code_environment?.testCases || [],
+                          allowRun: formData.code_environment?.allowRun ?? true,
+                          allowSubmit:
+                            formData.code_environment?.allowSubmit ?? true,
+                        })
+                      }
+                      className="w-full p-2 border rounded-md"
+                      required
+                    >
+                      <option value="javascript">JavaScript</option>
+                      <option value="typescript">TypeScript</option>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                      <option value="cpp">C++</option>
+                      <option value="c">C</option>
+                      <option value="csharp">C#</option>
+                      <option value="go">Go</option>
+                      <option value="rust">Rust</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.code_environment?.allowRun ?? true}
+                        onChange={(e) =>
+                          handleInputChange("code_environment", {
+                            ...formData.code_environment,
+                            allowRun: e.target.checked,
+                            language:
+                              formData.code_environment?.language ||
+                              "javascript",
+                            instructions:
+                              formData.code_environment?.instructions || "",
+                            starterCode:
+                              formData.code_environment?.starterCode || "",
+                            testCases:
+                              formData.code_environment?.testCases || [],
+                            allowSubmit:
+                              formData.code_environment?.allowSubmit ?? true,
+                          })
+                        }
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium">
+                        Allow Code Execution
+                      </span>
+                    </label>
+
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.code_environment?.allowSubmit ?? true}
+                        onChange={(e) =>
+                          handleInputChange("code_environment", {
+                            ...formData.code_environment,
+                            allowSubmit: e.target.checked,
+                            language:
+                              formData.code_environment?.language ||
+                              "javascript",
+                            instructions:
+                              formData.code_environment?.instructions || "",
+                            starterCode:
+                              formData.code_environment?.starterCode || "",
+                            testCases:
+                              formData.code_environment?.testCases || [],
+                            allowRun:
+                              formData.code_environment?.allowRun ?? true,
+                          })
+                        }
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium">
+                        Allow Submission
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Instructions (Markdown) *
+                  </label>
+                  <Textarea
+                    value={formData.code_environment?.instructions || ""}
+                    onChange={(e) =>
+                      handleInputChange("code_environment", {
+                        ...formData.code_environment,
+                        instructions: e.target.value,
+                        language:
+                          formData.code_environment?.language || "javascript",
+                        starterCode:
+                          formData.code_environment?.starterCode || "",
+                        testCases: formData.code_environment?.testCases || [],
+                        allowRun: formData.code_environment?.allowRun ?? true,
+                        allowSubmit:
+                          formData.code_environment?.allowSubmit ?? true,
+                      })
+                    }
+                    placeholder="## Task&#10;&#10;Write a function that...&#10;&#10;### Requirements:&#10;- Requirement 1&#10;- Requirement 2"
+                    rows={6}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use Markdown formatting for instructions
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Starter Code
+                  </label>
+                  <Textarea
+                    value={formData.code_environment?.starterCode || ""}
+                    onChange={(e) =>
+                      handleInputChange("code_environment", {
+                        ...formData.code_environment,
+                        starterCode: e.target.value,
+                        language:
+                          formData.code_environment?.language || "javascript",
+                        instructions:
+                          formData.code_environment?.instructions || "",
+                        testCases: formData.code_environment?.testCases || [],
+                        allowRun: formData.code_environment?.allowRun ?? true,
+                        allowSubmit:
+                          formData.code_environment?.allowSubmit ?? true,
+                      })
+                    }
+                    placeholder="function add(a, b) {&#10;  // Your code here&#10;  return 0;&#10;}"
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Initial code provided to students (optional)
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">
+                      Test Cases
+                    </label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newTestCase: TestCase = {
+                          input: "",
+                          expectedOutput: "",
+                          hidden: false,
+                        };
+                        handleInputChange("code_environment", {
+                          ...formData.code_environment,
+                          testCases: [
+                            ...(formData.code_environment?.testCases || []),
+                            newTestCase,
+                          ],
+                          language:
+                            formData.code_environment?.language || "javascript",
+                          instructions:
+                            formData.code_environment?.instructions || "",
+                          starterCode:
+                            formData.code_environment?.starterCode || "",
+                          allowRun: formData.code_environment?.allowRun ?? true,
+                          allowSubmit:
+                            formData.code_environment?.allowSubmit ?? true,
+                        });
+                      }}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Test Case
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(formData.code_environment?.testCases || []).map(
+                      (testCase, index) => (
+                        <div
+                          key={index}
+                          className="p-4 border rounded-lg space-y-3 bg-gray-50 dark:bg-gray-900"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold">
+                              Test Case {index + 1}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center space-x-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={testCase.hidden || false}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...(formData.code_environment
+                                        ?.testCases || []),
+                                    ];
+                                    updated[index] = {
+                                      ...updated[index],
+                                      hidden: e.target.checked,
+                                    };
+                                    handleInputChange("code_environment", {
+                                      ...formData.code_environment,
+                                      testCases: updated,
+                                      language:
+                                        formData.code_environment?.language ||
+                                        "javascript",
+                                      instructions:
+                                        formData.code_environment
+                                          ?.instructions || "",
+                                      starterCode:
+                                        formData.code_environment
+                                          ?.starterCode || "",
+                                      allowRun:
+                                        formData.code_environment?.allowRun ??
+                                        true,
+                                      allowSubmit:
+                                        formData.code_environment
+                                          ?.allowSubmit ?? true,
+                                    });
+                                  }}
+                                  className="rounded"
+                                />
+                                <span>Hidden</span>
+                              </label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updated =
+                                    formData.code_environment?.testCases?.filter(
+                                      (_, i) => i !== index
+                                    ) || [];
+                                  handleInputChange("code_environment", {
+                                    ...formData.code_environment,
+                                    testCases: updated,
+                                    language:
+                                      formData.code_environment?.language ||
+                                      "javascript",
+                                    instructions:
+                                      formData.code_environment?.instructions ||
+                                      "",
+                                    starterCode:
+                                      formData.code_environment?.starterCode ||
+                                      "",
+                                    allowRun:
+                                      formData.code_environment?.allowRun ??
+                                      true,
+                                    allowSubmit:
+                                      formData.code_environment?.allowSubmit ??
+                                      true,
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Input
+                              </label>
+                              <Input
+                                value={testCase.input}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.code_environment?.testCases ||
+                                      []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    input: e.target.value,
+                                  };
+                                  handleInputChange("code_environment", {
+                                    ...formData.code_environment,
+                                    testCases: updated,
+                                    language:
+                                      formData.code_environment?.language ||
+                                      "javascript",
+                                    instructions:
+                                      formData.code_environment?.instructions ||
+                                      "",
+                                    starterCode:
+                                      formData.code_environment?.starterCode ||
+                                      "",
+                                    allowRun:
+                                      formData.code_environment?.allowRun ??
+                                      true,
+                                    allowSubmit:
+                                      formData.code_environment?.allowSubmit ??
+                                      true,
+                                  });
+                                }}
+                                placeholder="add(2, 3)"
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">
+                                Expected Output
+                              </label>
+                              <Input
+                                value={testCase.expectedOutput}
+                                onChange={(e) => {
+                                  const updated = [
+                                    ...(formData.code_environment?.testCases ||
+                                      []),
+                                  ];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    expectedOutput: e.target.value,
+                                  };
+                                  handleInputChange("code_environment", {
+                                    ...formData.code_environment,
+                                    testCases: updated,
+                                    language:
+                                      formData.code_environment?.language ||
+                                      "javascript",
+                                    instructions:
+                                      formData.code_environment?.instructions ||
+                                      "",
+                                    starterCode:
+                                      formData.code_environment?.starterCode ||
+                                      "",
+                                    allowRun:
+                                      formData.code_environment?.allowRun ??
+                                      true,
+                                    allowSubmit:
+                                      formData.code_environment?.allowSubmit ??
+                                      true,
+                                  });
+                                }}
+                                placeholder="5"
+                                className="font-mono text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Description (optional)
+                            </label>
+                            <Input
+                              value={testCase.description || ""}
+                              onChange={(e) => {
+                                const updated = [
+                                  ...(formData.code_environment?.testCases ||
+                                    []),
+                                ];
+                                updated[index] = {
+                                  ...updated[index],
+                                  description: e.target.value,
+                                };
+                                handleInputChange("code_environment", {
+                                  ...formData.code_environment,
+                                  testCases: updated,
+                                  language:
+                                    formData.code_environment?.language ||
+                                    "javascript",
+                                  instructions:
+                                    formData.code_environment?.instructions ||
+                                    "",
+                                  starterCode:
+                                    formData.code_environment?.starterCode ||
+                                    "",
+                                  allowRun:
+                                    formData.code_environment?.allowRun ?? true,
+                                  allowSubmit:
+                                    formData.code_environment?.allowSubmit ??
+                                    true,
+                                });
+                              }}
+                              placeholder="Tests basic addition"
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {(!formData.code_environment?.testCases ||
+                      formData.code_environment.testCases.length === 0) && (
+                      <div className="text-center py-4 text-sm text-gray-500 border border-dashed rounded-lg">
+                        No test cases added yet. Click "Add Test Case" to create
+                        one.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
           {/* Submit Buttons */}
           <div className="flex space-x-4 pt-4">
-            <Button 
-              type="submit" 
-              disabled={loading || !formData.title.trim()}
+            {/* Option 1: Disable save button during upload */}
+            {(isVideoUploading || isDocumentUploading) && (
+              <div className="w-full mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                ⏳ Please wait for upload to complete before saving...
+              </div>
+            )}
+            <Button
+              type="submit"
+              disabled={
+                loading ||
+                !formData.title.trim() ||
+                isVideoUploading ||
+                isDocumentUploading
+              }
               className="flex-1"
             >
-              {loading ? 'Saving...' : 'Save Lesson'}
+              {loading
+                ? "Saving..."
+                : isVideoUploading || isDocumentUploading
+                ? "Uploading..."
+                : "Save Lesson"}
             </Button>
-            
+
             <Button
               type="button"
               variant="outline"

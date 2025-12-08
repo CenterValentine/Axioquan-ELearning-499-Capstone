@@ -1,191 +1,225 @@
 // /components/courses/quiz-page.tsx
 
-'use client'
+"use client";
 
-import { useState, useEffect } from "react"
-import { ChevronRight, ChevronLeft, Clock, CheckCircle2, AlertCircle, BarChart3, Home, X } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  BarChart3,
+  Home,
+  X,
+  Loader2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface Question {
-  id: string
-  type: "multiple-choice" | "true-false" | "short-answer" | "essay" | "code"
-  question: string
-  description?: string
-  options?: string[]
-  correctAnswer?: string | string[] | number
-  explanation?: string
-  points: number
-  timeLimit?: number
+  id: string;
+  type: "multiple-choice" | "true-false" | "short-answer" | "essay" | "code";
+  question: string;
+  description?: string;
+  options?: string[];
+  correctAnswer?: string | string[] | number;
+  explanation?: string;
+  points: number;
+  timeLimit?: number;
 }
 
 interface Quiz {
-  id: string
-  title: string
-  description: string
-  course: string
-  totalQuestions: number
-  timeLimit: number
-  passingScore: number
-  questions: Question[]
+  id: string;
+  title: string;
+  description: string;
+  course: string;
+  totalQuestions: number;
+  timeLimit: number;
+  passingScore: number;
+  questions: Question[];
 }
 
 interface UserAnswer {
-  questionId: string
-  answer: string | string[] | number
-  timeSpent: number
+  questionId: string;
+  answer: string | string[] | number;
+  timeSpent: number;
 }
 
 interface QuizPageProps {
-  quizId: string
+  quizId: string;
 }
 
 export default function QuizPage({ quizId }: QuizPageProps) {
-  const router = useRouter()
+  const router = useRouter();
 
-  const [stage, setStage] = useState<"intro" | "quiz" | "results">("intro")
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([])
-  const [currentAnswer, setCurrentAnswer] = useState<string | string[] | number>("")
-  const [timeRemaining, setTimeRemaining] = useState(1800) // 30 minutes
-  const [showTimer, setShowTimer] = useState(true)
-  const [quizStartTime, setQuizStartTime] = useState<number | null>(null)
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stage, setStage] = useState<"intro" | "quiz" | "results">("intro");
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
+  const [currentAnswer, setCurrentAnswer] = useState<
+    string | string[] | number
+  >("");
+  const [timeRemaining, setTimeRemaining] = useState(1800); // 30 minutes
+  const [showTimer, setShowTimer] = useState(true);
+  const [quizStartTime, setQuizStartTime] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [quizResults, setQuizResults] = useState<any>(null);
 
-  // Mock quiz data
-  const quiz: Quiz = {
-    id: quizId,
-    title: "React Fundamentals Quiz",
-    description: "Test your knowledge of React basics",
-    course: "Advanced React Masterclass",
-    totalQuestions: 5,
-    timeLimit: 1800,
-    passingScore: 70,
-    questions: [
-      {
-        id: "1",
-        type: "multiple-choice",
-        question: "What is JSX?",
-        description: "Select the correct definition",
-        options: [
-          "JavaScript XML syntax extension for React",
-          "A new JavaScript framework",
-          "A CSS preprocessor",
-          "A database query language",
-        ],
-        correctAnswer: 0,
-        explanation: "JSX is a syntax extension to JavaScript that allows you to write HTML-like code in JavaScript.",
-        points: 10,
-      },
-      {
-        id: "2",
-        type: "true-false",
-        question: "In React, you can directly modify component state?",
-        options: ["True", "False"],
-        correctAnswer: 1,
-        explanation: "Never modify state directly. Always use setState or hook functions to update state.",
-        points: 10,
-      },
-      {
-        id: "3",
-        type: "short-answer",
-        question: "What hook is used for side effects in React functional components?",
-        correctAnswer: "useEffect",
-        explanation: "The useEffect hook is used to perform side effects in function components.",
-        points: 15,
-      },
-      {
-        id: "4",
-        type: "essay",
-        question: "Explain the concept of lifting state up in React and provide a practical example.",
-        description: "Write a detailed explanation (minimum 100 words)",
-        points: 20,
-      },
-      {
-        id: "5",
-        type: "code",
-        question: "Complete the useState hook to manage a counter",
-        description: "Fill in the missing code",
-        correctAnswer: "const [count, setCount] = useState(0)",
-        points: 15,
-      },
-    ],
-  }
+  // Fetch quiz data
+  useEffect(() => {
+    const fetchQuiz = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/lessons/${quizId}/quiz`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load quiz");
+        }
+
+        setQuiz(data.quiz);
+        setTimeRemaining(data.quiz.timeLimit);
+      } catch (err: any) {
+        console.error("Error fetching quiz:", err);
+        setError(err.message || "Failed to load quiz");
+        toast.error("Error", {
+          description: err.message || "Failed to load quiz",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (quizId) {
+      fetchQuiz();
+    }
+  }, [quizId]);
 
   useEffect(() => {
     if (stage === "quiz" && quizStartTime !== null) {
       const timer = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            setStage("results")
-            return 0
+            setStage("results");
+            return 0;
           }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(timer)
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
     }
-  }, [stage, quizStartTime])
+  }, [stage, quizStartTime]);
 
   const startQuiz = () => {
-    setStage("quiz")
-    setQuizStartTime(Date.now())
-  }
+    setStage("quiz");
+    setQuizStartTime(Date.now());
+  };
 
   const handleAnswer = (answer: string | string[] | number) => {
-    setCurrentAnswer(answer)
-  }
+    setCurrentAnswer(answer);
+  };
 
   const submitAnswer = () => {
-    const newAnswers = [...userAnswers]
-    const existingIndex = newAnswers.findIndex((a) => a.questionId === quiz.questions[currentQuestion].id)
+    if (!quiz) return;
+
+    const newAnswers = [...userAnswers];
+    const existingIndex = newAnswers.findIndex(
+      (a) => a.questionId === quiz.questions[currentQuestion].id
+    );
 
     if (existingIndex >= 0) {
-      newAnswers[existingIndex].answer = currentAnswer
+      newAnswers[existingIndex].answer = currentAnswer;
     } else {
       newAnswers.push({
         questionId: quiz.questions[currentQuestion].id,
         answer: currentAnswer,
         timeSpent: 0,
-      })
+      });
     }
 
-    setUserAnswers(newAnswers)
+    setUserAnswers(newAnswers);
 
     if (currentQuestion < quiz.questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-      setCurrentAnswer("")
+      setCurrentQuestion(currentQuestion + 1);
+      setCurrentAnswer("");
     } else {
-      setStage("results")
+      submitQuiz(newAnswers);
     }
-  }
+  };
 
-  const calculateScore = () => {
-    let score = 0
-    let totalPoints = 0
+  const submitQuiz = async (answers: UserAnswer[]) => {
+    if (!quiz || !quizStartTime) return;
 
-    quiz.questions.forEach((question) => {
-      totalPoints += question.points
-      const userAnswer = userAnswers.find((a) => a.questionId === question.id)
-      if (userAnswer) {
-        if (question.type === "essay" || question.type === "code") {
-          score += question.points * 0.5 // default 50% for demonstration
-        } else if (userAnswer.answer === question.correctAnswer) {
-          score += question.points
-        }
+    try {
+      setSubmitting(true);
+      const timeTaken = Math.floor((Date.now() - quizStartTime) / 1000);
+
+      const response = await fetch(`/api/lessons/${quizId}/quiz/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers,
+          timeTaken,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit quiz");
       }
-    })
 
-    return { score: Math.round(score), totalPoints, percentage: Math.round((score / totalPoints) * 100) }
-  }
+      setQuizResults(data);
+      setStage("results");
+      toast.success("Quiz Submitted", { description: data.feedback });
+    } catch (err: any) {
+      console.error("Error submitting quiz:", err);
+      toast.error("Error", {
+        description: err.message || "Failed to submit quiz",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading quiz...</p>
+        </div>
+      </div>
+    );
   }
 
-  const question = quiz.questions[currentQuestion]
-  const { score, totalPoints, percentage } = calculateScore()
-  const passed = percentage >= quiz.passingScore
+  if (error || !quiz) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 mx-auto mb-4 text-destructive" />
+          <p className="text-destructive">{error || "Quiz not found"}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const question = quiz.questions[currentQuestion];
+  const score = quizResults?.score || 0;
+  const totalPoints =
+    quizResults?.totalPoints ||
+    quiz.questions.reduce((sum, q) => sum + q.points, 0);
+  const percentage = quizResults?.percentage || 0;
+  const passed = quizResults?.passed || false;
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -196,12 +230,14 @@ export default function QuizPage({ quizId }: QuizPageProps) {
             {/* Left side - Navigation Icons */}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push("/dashboard")}
                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition text-gray-700 hover:text-gray-900"
                 title="Go to Dashboard"
               >
                 <Home size={20} />
-                <span className="hidden sm:inline text-sm font-medium">Dashboard</span>
+                <span className="hidden sm:inline text-sm font-medium">
+                  Dashboard
+                </span>
               </button>
               <button
                 onClick={() => router.push(`/courses/learn/1`)}
@@ -209,7 +245,9 @@ export default function QuizPage({ quizId }: QuizPageProps) {
                 title="Quit Quiz"
               >
                 <X size={20} />
-                <span className="hidden sm:inline text-sm font-medium">Quit Quiz</span>
+                <span className="hidden sm:inline text-sm font-medium">
+                  Quit Quiz
+                </span>
               </button>
             </div>
 
@@ -220,7 +258,9 @@ export default function QuizPage({ quizId }: QuizPageProps) {
                 <span className="text-white font-bold text-lg">A</span>
               </div>
               {/* Brand Name */}
-              <span className="text-xl font-bold text-gray-900 hidden sm:block">AxioQuan</span>
+              <span className="text-xl font-bold text-gray-900 hidden sm:block">
+                AxioQuan
+              </span>
             </div>
 
             {/* Right side - Spacer for balance */}
@@ -253,26 +293,42 @@ export default function QuizPage({ quizId }: QuizPageProps) {
             {/* Stats cards */}
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-                <p className="text-sm text-muted-foreground mb-2">Total Questions</p>
-                <p className="text-3xl font-bold text-primary">{quiz.totalQuestions}</p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Total Questions
+                </p>
+                <p className="text-3xl font-bold text-primary">
+                  {quiz.totalQuestions}
+                </p>
               </div>
               <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
                 <p className="text-sm text-muted-foreground mb-2">Time Limit</p>
-                <p className="text-3xl font-bold text-primary">{quiz.timeLimit / 60} min</p>
+                <p className="text-3xl font-bold text-primary">
+                  {quiz.timeLimit / 60} min
+                </p>
               </div>
               <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-                <p className="text-sm text-muted-foreground mb-2">Passing Score</p>
-                <p className="text-3xl font-bold text-primary">{quiz.passingScore}%</p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Passing Score
+                </p>
+                <p className="text-3xl font-bold text-primary">
+                  {quiz.passingScore}%
+                </p>
               </div>
             </div>
 
             {/* Instructions and Start Button remain unchanged */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="font-semibold text-blue-900 mb-3">Quiz Instructions</h3>
+              <h3 className="font-semibold text-blue-900 mb-3">
+                Quiz Instructions
+              </h3>
               <ul className="space-y-2 text-blue-800 text-sm">
                 <li>• Answer all {quiz.totalQuestions} questions carefully</li>
-                <li>• You have {formatTime(quiz.timeLimit)} to complete the quiz</li>
-                <li>• You need to score at least {quiz.passingScore}% to pass</li>
+                <li>
+                  • You have {formatTime(quiz.timeLimit)} to complete the quiz
+                </li>
+                <li>
+                  • You need to score at least {quiz.passingScore}% to pass
+                </li>
                 <li>• Review your answers before submitting</li>
               </ul>
             </div>
@@ -298,7 +354,11 @@ export default function QuizPage({ quizId }: QuizPageProps) {
                 <div className="mt-2 bg-muted rounded-full h-2 w-48">
                   <div
                     className="bg-primary rounded-full h-2 transition-all"
-                    style={{ width: `${((currentQuestion + 1) / quiz.totalQuestions) * 100}%` }}
+                    style={{
+                      width: `${
+                        ((currentQuestion + 1) / quiz.totalQuestions) * 100
+                      }%`,
+                    }}
                   />
                 </div>
               </div>
@@ -317,22 +377,37 @@ export default function QuizPage({ quizId }: QuizPageProps) {
             {/* Question */}
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">{question.question}</h2>
-                {question.description && <p className="text-muted-foreground">{question.description}</p>}
-                <p className="text-sm text-primary font-semibold mt-4">{question.points} points</p>
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  {question.question}
+                </h2>
+                {question.description && (
+                  <p className="text-muted-foreground">
+                    {question.description}
+                  </p>
+                )}
+                <p className="text-sm text-primary font-semibold mt-4">
+                  {question.points} points
+                </p>
               </div>
 
               {/* Answer Options */}
               <div className="space-y-3">
-                {(question.type === "multiple-choice" || question.type === "true-false") ? (
+                {question.type === "multiple-choice" ||
+                question.type === "true-false" ? (
                   <div className="space-y-3">
                     {question.options?.map((option, index) => (
                       <label
                         key={index}
                         className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition hover:border-primary"
                         style={{
-                          borderColor: currentAnswer === index ? "var(--primary)" : "var(--border)",
-                          backgroundColor: currentAnswer === index ? "rgba(var(--primary), 0.05)" : "transparent",
+                          borderColor:
+                            currentAnswer === index
+                              ? "var(--primary)"
+                              : "var(--border)",
+                          backgroundColor:
+                            currentAnswer === index
+                              ? "rgba(var(--primary), 0.05)"
+                              : "transparent",
                         }}
                       >
                         <input
@@ -343,11 +418,14 @@ export default function QuizPage({ quizId }: QuizPageProps) {
                           onChange={() => handleAnswer(index)}
                           className="w-5 h-5 cursor-pointer"
                         />
-                        <span className="ml-4 font-medium text-foreground">{option}</span>
+                        <span className="ml-4 font-medium text-foreground">
+                          {option}
+                        </span>
                       </label>
                     ))}
                   </div>
-                ) : question.type === "short-answer" || question.type === "code" ? (
+                ) : question.type === "short-answer" ||
+                  question.type === "code" ? (
                   <input
                     type="text"
                     value={currentAnswer as string}
@@ -370,7 +448,9 @@ export default function QuizPage({ quizId }: QuizPageProps) {
             {/* Navigation */}
             <div className="flex gap-4 justify-between pt-6 border-t border-border">
               <button
-                onClick={() => currentQuestion > 0 && setCurrentQuestion(currentQuestion - 1)}
+                onClick={() =>
+                  currentQuestion > 0 && setCurrentQuestion(currentQuestion - 1)
+                }
                 disabled={currentQuestion === 0}
                 className="flex items-center gap-2 px-6 py-3 rounded-lg border border-border hover:bg-muted transition disabled:opacity-50"
               >
@@ -379,10 +459,22 @@ export default function QuizPage({ quizId }: QuizPageProps) {
               </button>
               <button
                 onClick={submitAnswer}
-                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition"
+                disabled={submitting}
+                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition disabled:opacity-50"
               >
-                {currentQuestion === quiz.questions.length - 1 ? "Submit Quiz" : "Next"}
-                <ChevronRight size={20} />
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    {currentQuestion === quiz.questions.length - 1
+                      ? "Submit Quiz"
+                      : "Next"}
+                    <ChevronRight size={20} />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -394,15 +486,25 @@ export default function QuizPage({ quizId }: QuizPageProps) {
             {/* Results Header */}
             <div
               className={`rounded-2xl p-8 text-white space-y-4 ${
-                passed ? "bg-gradient-to-br from-green-600 to-green-400" : "bg-gradient-to-br from-red-600 to-red-400"
+                passed
+                  ? "bg-gradient-to-br from-green-600 to-green-400"
+                  : "bg-gradient-to-br from-red-600 to-red-400"
               }`}
             >
               <div className="flex items-center gap-3">
-                {passed ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
+                {passed ? (
+                  <CheckCircle2 size={40} />
+                ) : (
+                  <AlertCircle size={40} />
+                )}
                 <div>
-                  <h1 className="text-3xl font-bold">{passed ? "Congratulations!" : "Quiz Complete"}</h1>
+                  <h1 className="text-3xl font-bold">
+                    {passed ? "Congratulations!" : "Quiz Complete"}
+                  </h1>
                   <p className="opacity-90">
-                    {passed ? "You passed the quiz!" : "Review the material and try again"}
+                    {passed
+                      ? "You passed the quiz!"
+                      : "Review the material and try again"}
                   </p>
                 </div>
               </div>
@@ -412,7 +514,9 @@ export default function QuizPage({ quizId }: QuizPageProps) {
             <div className="bg-card rounded-xl border border-border p-8 space-y-6">
               <div className="text-center space-y-2">
                 <p className="text-muted-foreground">Your Score</p>
-                <div className="text-6xl font-bold text-primary">{percentage}%</div>
+                <div className="text-6xl font-bold text-primary">
+                  {percentage}%
+                </div>
                 <p className="text-lg text-muted-foreground">
                   {score} out of {totalPoints} points
                 </p>
@@ -420,18 +524,28 @@ export default function QuizPage({ quizId }: QuizPageProps) {
 
               <div className="grid md:grid-cols-3 gap-4 pt-6 border-t border-border">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Questions Answered</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Questions Answered
+                  </p>
                   <p className="text-2xl font-bold text-foreground">
                     {userAnswers.length}/{quiz.totalQuestions}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-1">Passing Score</p>
-                  <p className="text-2xl font-bold text-foreground">{quiz.passingScore}%</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Passing Score
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {quiz.passingScore}%
+                  </p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-1">Result</p>
-                  <p className={`text-2xl font-bold ${passed ? "text-green-600" : "text-destructive"}`}>
+                  <p
+                    className={`text-2xl font-bold ${
+                      passed ? "text-green-600" : "text-destructive"
+                    }`}
+                  >
                     {passed ? "PASSED" : "FAILED"}
                   </p>
                 </div>
@@ -441,5 +555,5 @@ export default function QuizPage({ quizId }: QuizPageProps) {
         )}
       </div>
     </div>
-  )
+  );
 }
