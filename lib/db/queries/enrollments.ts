@@ -817,6 +817,114 @@ export async function updateLessonWatchedTime(
 }
 
 /**
+ * Reset a single lesson's completion status for a user and course.
+ * Deletes the user_progress row for that lesson and recalculates enrollment progress.
+ */
+export async function resetLessonCompletion(
+  userId: string,
+  courseId: string,
+  lessonId: string
+): Promise<{
+  success: boolean;
+  message: string;
+  progress?: {
+    moduleProgress: number;
+    overallProgress: number;
+    completedLessons: number;
+  };
+  errors?: string[];
+}> {
+  try {
+    // Verify enrollment exists
+    const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+    if (!enrollment) {
+      return {
+        success: false,
+        message: "Enrollment not found",
+        errors: ["You are not enrolled in this course"],
+      };
+    }
+
+    // Get module_id for this lesson
+    const lessonData = await sql`
+      SELECT module_id FROM lessons WHERE id = ${lessonId} LIMIT 1
+    `;
+    if (lessonData.length === 0) {
+      return {
+        success: false,
+        message: "Lesson not found",
+        errors: ["Lesson not found"],
+      };
+    }
+    const moduleId = lessonData[0].module_id;
+
+    // Delete any user_progress record for this lesson
+    await sql`
+      DELETE FROM user_progress
+      WHERE user_id = ${userId}::uuid
+        AND lesson_id = ${lessonId}::uuid
+    `;
+
+    // Recalculate enrollment progress
+    const progressUpdate = await updateEnrollmentProgress(userId, courseId);
+    if (!progressUpdate.success) {
+      return {
+        success: false,
+        message: "Failed to update progress",
+        errors: progressUpdate.errors,
+      };
+    }
+
+    // Calculate module progress for this module (for UI feedback)
+    const moduleLessonsResult = await sql`
+      SELECT COUNT(*) as total
+      FROM lessons
+      WHERE module_id = ${moduleId} AND is_published = true
+    `;
+    const moduleTotalLessons = parseInt(
+      moduleLessonsResult[0]?.total || "0",
+      10
+    );
+
+    const moduleCompletedResult = await sql`
+      SELECT COUNT(*) as count
+      FROM user_progress up
+      INNER JOIN lessons l ON up.lesson_id = l.id
+      WHERE up.user_id = ${userId}::uuid
+        AND up.is_completed = true
+        AND l.module_id = ${moduleId}::uuid
+        AND l.is_published = true
+    `;
+    const moduleCompletedLessons = parseInt(
+      moduleCompletedResult[0]?.count || "0",
+      10
+    );
+
+    const moduleProgress =
+      moduleTotalLessons > 0
+        ? Math.round((moduleCompletedLessons / moduleTotalLessons) * 100)
+        : 0;
+
+    return {
+      success: true,
+      message: "Lesson marked as incomplete",
+      progress: {
+        moduleProgress,
+        overallProgress: progressUpdate.overallProgress || 0,
+        completedLessons: progressUpdate.completedLessons || 0,
+      },
+    };
+  } catch (error: any) {
+    console.error("❌ Error resetting lesson completion:", error);
+    return {
+      success: false,
+      message: "Failed to reset lesson completion",
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}
+
+/**
  * Reset course progress by deleting all user_progress records for a course
  * and resetting the enrollment progress_percentage to 0
  */

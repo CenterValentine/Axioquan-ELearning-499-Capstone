@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,7 @@ export default function ContinueLearning({ courses }: ContinueLearningProps) {
       return;
     }
 
+    //  Resting entire course progress
     setResettingCourseId(courseId);
     try {
       const response = await fetch(`/api/courses/${courseId}/reset-progress`, {

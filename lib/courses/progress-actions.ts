@@ -6,6 +6,7 @@ import {
   getLessonProgress,
   completeLesson,
   updateLessonWatchedTime,
+  resetLessonCompletion,
   resetCourseProgress,
 } from "@/lib/db/queries/enrollments";
 import { requireAuth } from "@/lib/auth/utils";
@@ -117,6 +118,44 @@ export async function updateWatchedTimeAction(
 
     return {
       success: false,
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}
+
+/**
+ * Mark a lesson as incomplete (toggle completion off)
+ */
+export async function resetLessonProgressAction(
+  courseId: string,
+  lessonId: string
+): Promise<{
+  success: boolean;
+  message: string;
+  progress?: {
+    moduleProgress: number;
+    overallProgress: number;
+    completedLessons: number;
+  };
+  errors?: string[];
+}> {
+  try {
+    const session = await requireAuth();
+
+    return await resetLessonCompletion(session.userId, courseId, lessonId);
+  } catch (error: any) {
+    console.error("❌ Error resetting lesson progress:", error);
+
+    if (
+      error.message?.includes("unauthorized") ||
+      error.message?.includes("Unauthorized")
+    ) {
+      throw new Error("unauthorized");
+    }
+
+    return {
+      success: false,
+      message: "Failed to reset lesson progress",
       errors: [error.message || "An unexpected error occurred"],
     };
   }
