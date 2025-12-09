@@ -36,7 +36,7 @@ export async function getUserEnrolledCourses(userId: string): Promise<any[]> {
         c.created_at,
         c.updated_at,
         -- Enrollment fields
-        e.progress_percentage as progress,
+        e.progress_percentage as stored_progress,
         e.status as enrollment_status,
         e.enrolled_at,
         e.last_accessed_at,
@@ -63,7 +63,79 @@ export async function getUserEnrolledCourses(userId: string): Promise<any[]> {
       ORDER BY e.enrolled_at DESC;
     `;
 
-    return rows as any[];
+    // Calculate actual progress from user_progress table for each course
+    const coursesWithProgress = await Promise.all(
+      rows.map(async (row: any) => {
+        try {
+          // Get all modules for this course
+          const modulesResult = await sql`
+            SELECT m.id
+            FROM modules m
+            WHERE m.course_id = ${row.id}::uuid AND m.is_published = true
+            ORDER BY m.order_index ASC
+          `;
+
+          let totalModuleProgress = 0;
+          let moduleCount = 0;
+
+          for (const moduleRow of modulesResult) {
+            const modId = moduleRow.id;
+
+            // Get total lessons in this module
+            const modTotalResult = await sql`
+              SELECT COUNT(*) as total
+              FROM lessons
+              WHERE module_id = ${modId}::uuid AND is_published = true
+            `;
+            const modTotalLessons = parseInt(modTotalResult[0]?.total || "0", 10);
+
+            if (modTotalLessons > 0) {
+              // Get completed lessons in this module
+              const modCompletedResult = await sql`
+                SELECT COUNT(*) as count
+                FROM user_progress up
+                INNER JOIN lessons l ON up.lesson_id = l.id
+                WHERE up.user_id = ${userId}::uuid
+                  AND up.is_completed = true
+                  AND l.module_id = ${modId}::uuid
+                  AND l.is_published = true
+              `;
+              const modCompletedLessons = parseInt(
+                modCompletedResult[0]?.count || "0",
+                10
+              );
+
+              const modProgress = Math.round(
+                (modCompletedLessons / modTotalLessons) * 100
+              );
+              totalModuleProgress += modProgress;
+              moduleCount++;
+            }
+          }
+
+          // Calculate overall progress as average of module progress percentages
+          const calculatedProgress =
+            moduleCount > 0 ? Math.round(totalModuleProgress / moduleCount) : 0;
+
+          return {
+            ...row,
+            progress: calculatedProgress, // Use calculated progress instead of stored
+          };
+        } catch (error: any) {
+          // If calculation fails, fall back to stored progress
+          console.warn(
+            `⚠️ Could not calculate progress for course ${row.id}:`,
+            error.message
+          );
+          return {
+            ...row,
+            progress: row.stored_progress || 0,
+          };
+        }
+      })
+    );
+
+    return coursesWithProgress;
   } catch (error) {
     console.error("❌ Error fetching user enrolled courses:", error);
     return [];
@@ -357,6 +429,118 @@ export async function getLessonProgress(
 }
 
 /**
+ * Recalculate and update enrollment progress percentage
+ * This function can be called after any lesson completion to keep progress in sync
+ */
+export async function updateEnrollmentProgress(
+  userId: string,
+  courseId: string
+): Promise<{
+  success: boolean;
+  overallProgress?: number;
+  completedLessons?: number;
+  errors?: string[];
+}> {
+  try {
+    // Get enrollment
+    const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+    if (!enrollment) {
+      return {
+        success: false,
+        errors: ["Enrollment not found"],
+      };
+    }
+
+    // Count completed lessons for this course using user_progress
+    const completedCountResult = await sql`
+        SELECT COUNT(*) as count
+        FROM user_progress up
+        INNER JOIN lessons l ON up.lesson_id = l.id
+        WHERE up.user_id = ${userId}::uuid
+          AND l.course_id = ${courseId}::uuid
+          AND up.is_completed = true
+      `;
+    const completedLessons = parseInt(
+      completedCountResult[0]?.count || "0",
+      10
+    );
+
+    // Calculate overall progress using the same method as CourseLearningPageV2:
+    // Average of all module progress percentages (treats modules equally)
+    const modulesResult = await sql`
+      SELECT m.id, m.title
+      FROM modules m
+      WHERE m.course_id = ${courseId}::uuid AND m.is_published = true
+      ORDER BY m.order_index ASC
+    `;
+
+    let totalModuleProgress = 0;
+    let moduleCount = 0;
+
+    for (const moduleRow of modulesResult) {
+      const modId = moduleRow.id;
+
+      // Get total lessons in this module
+      const modTotalResult = await sql`
+        SELECT COUNT(*) as total
+        FROM lessons
+        WHERE module_id = ${modId}::uuid AND is_published = true
+      `;
+      const modTotalLessons = parseInt(modTotalResult[0]?.total || "0", 10);
+
+      if (modTotalLessons > 0) {
+        // Get completed lessons in this module
+        const modCompletedResult = await sql`
+          SELECT COUNT(*) as count
+          FROM user_progress up
+          INNER JOIN lessons l ON up.lesson_id = l.id
+          WHERE up.user_id = ${userId}::uuid
+            AND up.is_completed = true
+            AND l.module_id = ${modId}::uuid
+            AND l.is_published = true
+        `;
+        const modCompletedLessons = parseInt(
+          modCompletedResult[0]?.count || "0",
+          10
+        );
+
+        const modProgress = Math.round(
+          (modCompletedLessons / modTotalLessons) * 100
+        );
+        totalModuleProgress += modProgress;
+        moduleCount++;
+      }
+    }
+
+    // Calculate overall progress as average of module progress percentages
+    const overallProgress =
+      moduleCount > 0 ? Math.round(totalModuleProgress / moduleCount) : 0;
+
+    // Update enrollment progress
+    await sql`
+      UPDATE enrollments
+      SET 
+        completed_lessons = ${completedLessons},
+        progress_percentage = ${overallProgress},
+        last_activity_at = NOW()
+      WHERE id = ${enrollment.id}
+    `;
+
+    return {
+      success: true,
+      overallProgress,
+      completedLessons,
+    };
+  } catch (error: any) {
+    console.error("❌ Error updating enrollment progress:", error);
+    return {
+      success: false,
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}
+
+/**
  * Mark lesson as complete and update enrollment progress
  */
 export async function completeLesson(
@@ -473,21 +657,7 @@ export async function completeLesson(
       };
     }
 
-    // Count completed lessons for this course using user_progress
-    const completedCountResult = await sql`
-        SELECT COUNT(*) as count
-        FROM user_progress up
-        INNER JOIN lessons l ON up.lesson_id = l.id
-        WHERE up.user_id = ${userId}::uuid
-          AND l.course_id = ${courseId}::uuid
-          AND up.is_completed = true
-      `;
-    const completedLessons = parseInt(
-      completedCountResult[0]?.count || "0",
-      10
-    );
-
-    // Calculate module progress for the current module
+    // Calculate module progress for the current module (for return value)
     const moduleLessonsResult = await sql`
       SELECT COUNT(*) as total
       FROM lessons
@@ -517,74 +687,24 @@ export async function completeLesson(
         ? Math.round((moduleCompletedLessons / moduleTotalLessons) * 100)
         : 0;
 
-    // Calculate overall progress using the same method as CourseLearningPageV2:
-    // Average of all module progress percentages (treats modules equally)
-    const modulesResult = await sql`
-      SELECT m.id, m.title
-      FROM modules m
-      WHERE m.course_id = ${courseId}::uuid AND m.is_published = true
-      ORDER BY m.order_index ASC
-    `;
-
-    let totalModuleProgress = 0;
-    let moduleCount = 0;
-
-    for (const moduleRow of modulesResult) {
-      const modId = moduleRow.id;
-
-      // Get total lessons in this module
-      const modTotalResult = await sql`
-        SELECT COUNT(*) as total
-        FROM lessons
-        WHERE module_id = ${modId}::uuid AND is_published = true
-      `;
-      const modTotalLessons = parseInt(modTotalResult[0]?.total || "0", 10);
-
-      if (modTotalLessons > 0) {
-        // Get completed lessons in this module
-        const modCompletedResult = await sql`
-          SELECT COUNT(*) as count
-          FROM user_progress up
-          INNER JOIN lessons l ON up.lesson_id = l.id
-          WHERE up.user_id = ${userId}::uuid
-            AND up.is_completed = true
-            AND l.module_id = ${modId}::uuid
-            AND l.is_published = true
-        `;
-        const modCompletedLessons = parseInt(
-          modCompletedResult[0]?.count || "0",
-          10
-        );
-
-        const modProgress = Math.round(
-          (modCompletedLessons / modTotalLessons) * 100
-        );
-        totalModuleProgress += modProgress;
-        moduleCount++;
-      }
+    // Update enrollment progress using the helper function
+    const progressUpdate = await updateEnrollmentProgress(userId, courseId);
+    
+    if (!progressUpdate.success) {
+      return {
+        success: false,
+        message: "Failed to update progress",
+        errors: progressUpdate.errors,
+      };
     }
-
-    // Calculate overall progress as average of module progress percentages
-    const overallProgress =
-      moduleCount > 0 ? Math.round(totalModuleProgress / moduleCount) : 0;
-
-    // Update enrollment progress
-    await sql`
-      UPDATE enrollments
-      SET 
-        completed_lessons = ${completedLessons},
-        progress_percentage = ${overallProgress},
-        last_activity_at = NOW()
-      WHERE id = ${enrollment.id}
-    `;
 
     return {
       success: true,
       message: "Lesson marked as complete",
       progress: {
         moduleProgress,
-        overallProgress,
-        completedLessons,
+        overallProgress: progressUpdate.overallProgress || 0,
+        completedLessons: progressUpdate.completedLessons || 0,
       },
     };
   } catch (error: any) {

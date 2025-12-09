@@ -5,6 +5,7 @@ import { withSessionRefresh } from '@/lib/auth/utils';
 import { checkAuthStatus } from '@/lib/auth/actions';
 import { getInstructorCourses } from '@/lib/db/queries/courses';
 import { getRoleRequests } from '@/lib/db/queries/roles';
+import { getUserEnrolledCourses } from '@/lib/db/queries/enrollments';
 import { sql } from '@/lib/db/index';
 import DashboardOverview from '@/components/dashboard/dashboard-overview';
 import ContinueLearning from '@/components/dashboard/continue-learning';
@@ -97,13 +98,14 @@ export default async function DashboardPage() {
       }
 
       // Get enrolled courses for the ContinueLearning component
-      const enrolledCoursesData = await sql`
-        SELECT c.*, e.progress_percentage as progress 
-        FROM enrollments e
-        JOIN courses c ON e.course_id = c.id
-        WHERE e.user_id = ${session.userId} AND e.status = 'active'
-      `;
-      enrolledCoursesList = enrolledCoursesData;
+      // Use getUserEnrolledCourses which calculates progress from user_progress table
+      const enrolledCoursesData = await getUserEnrolledCourses(session.userId);
+      // Map to format expected by ContinueLearning component
+      enrolledCoursesList = enrolledCoursesData.map((course: any) => ({
+        ...course,
+        category: course.category_name || 'General',
+        description: course.short_description || course.description_html || '',
+      }));
 
     } else if (session.primaryRole === 'instructor') {
       // Get instructor-specific data

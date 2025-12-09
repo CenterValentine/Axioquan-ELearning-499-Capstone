@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { getLessonById } from "@/lib/db/queries/curriculum";
 import { getSession } from "@/lib/auth/session";
-import { getEnrollmentByUserAndCourse } from "@/lib/db/queries/enrollments";
+import { getEnrollmentByUserAndCourse, updateEnrollmentProgress } from "@/lib/db/queries/enrollments";
 import {
   QuizData,
   QuizSubmissionResult,
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // You might want to store attempts in enrollments.completed_lessons JSON instead
     }
 
-    // Mark lesson as complete in user_progress (no progress percentage updates)
+    // Mark lesson as complete in user_progress and update enrollment progress
     try {
       const existing = await sql`
         SELECT id FROM user_progress
@@ -208,6 +208,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             ${enrollment.id}::uuid, true, NOW()
           )
         `;
+      }
+
+      // Update enrollment progress percentage if quiz was passed
+      if (passed) {
+        try {
+          await updateEnrollmentProgress(session.userId, lesson.course_id);
+        } catch (progressError: any) {
+          // Log but don't fail the quiz submission if progress update fails
+          console.warn("⚠️ Could not update enrollment progress:", progressError.message);
+        }
       }
     } catch (error: any) {
       // Silently fail if table doesn't exist - don't break quiz submission
