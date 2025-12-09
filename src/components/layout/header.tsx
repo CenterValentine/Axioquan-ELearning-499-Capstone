@@ -702,7 +702,7 @@ export function Header() {
               Categories
             </ActiveLink>
 
-            <ActiveLink href="#">
+            <ActiveLink href="/about">
               About
             </ActiveLink>
           </div>
@@ -802,7 +802,7 @@ export function Header() {
               </ActiveLink>
 
               <ActiveLink 
-                href="#" 
+                href="/about" 
                 className="block"
                 activeClassName="bg-primary/20 text-primary"
                 inactiveClassName="text-foreground hover:bg-primary/10 hover:text-primary"
