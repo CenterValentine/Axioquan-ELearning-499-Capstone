@@ -87,7 +87,10 @@ export async function getUserEnrolledCourses(userId: string): Promise<any[]> {
               FROM lessons
               WHERE module_id = ${modId}::uuid AND is_published = true
             `;
-            const modTotalLessons = parseInt(modTotalResult[0]?.total || "0", 10);
+            const modTotalLessons = parseInt(
+              modTotalResult[0]?.total || "0",
+              10
+            );
 
             if (modTotalLessons > 0) {
               // Get completed lessons in this module
@@ -689,7 +692,7 @@ export async function completeLesson(
 
     // Update enrollment progress using the helper function
     const progressUpdate = await updateEnrollmentProgress(userId, courseId);
-    
+
     if (!progressUpdate.success) {
       return {
         success: false,
