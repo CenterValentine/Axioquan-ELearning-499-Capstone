@@ -812,3 +812,71 @@ export async function updateLessonWatchedTime(
     };
   }
 }
+
+/**
+ * Reset course progress by deleting all user_progress records for a course
+ * and resetting the enrollment progress_percentage to 0
+ */
+export async function resetCourseProgress(
+  userId: string,
+  courseId: string
+): Promise<{
+  success: boolean;
+  message: string;
+  errors?: string[];
+}> {
+  try {
+    // Get enrollment to verify user is enrolled
+    const enrollment = await getEnrollmentByUserAndCourse(userId, courseId);
+    if (!enrollment) {
+      return {
+        success: false,
+        message: "Enrollment not found",
+        errors: ["You are not enrolled in this course"],
+      };
+    }
+
+    // Delete all user_progress records for this user and course
+    try {
+      await sql`
+        DELETE FROM user_progress up
+        USING lessons l
+        WHERE up.user_id = ${userId}::uuid
+          AND up.lesson_id = l.id
+          AND l.course_id = ${courseId}::uuid
+      `;
+    } catch (error: any) {
+      // If table doesn't exist, that's okay - just log it
+      if (
+        error.message?.includes("does not exist") ||
+        error.message?.includes("relation")
+      ) {
+        console.warn("⚠️ user_progress table not found, skipping deletion");
+      } else {
+        throw error;
+      }
+    }
+
+    // Reset enrollment progress to 0
+    await sql`
+      UPDATE enrollments
+      SET 
+        progress_percentage = 0,
+        completed_lessons = 0,
+        last_activity_at = NOW()
+      WHERE id = ${enrollment.id}
+    `;
+
+    return {
+      success: true,
+      message: "Course progress has been reset successfully",
+    };
+  } catch (error: any) {
+    console.error("❌ Error resetting course progress:", error);
+    return {
+      success: false,
+      message: "Failed to reset course progress",
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}

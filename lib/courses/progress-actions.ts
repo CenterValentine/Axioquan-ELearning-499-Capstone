@@ -1,20 +1,19 @@
 // /lib/courses/progress-actions.ts
 
-'use server';
+"use server";
 
 import {
   getLessonProgress,
   completeLesson,
   updateLessonWatchedTime,
-} from '@/lib/db/queries/enrollments';
-import { requireAuth } from '@/lib/auth/utils';
+  resetCourseProgress,
+} from "@/lib/db/queries/enrollments";
+import { requireAuth } from "@/lib/auth/utils";
 
 /**
  * Get lesson progress for the current user in a course
  */
-export async function getLessonProgressAction(
-  courseId: string
-): Promise<{
+export async function getLessonProgressAction(courseId: string): Promise<{
   success: boolean;
   progress?: Map<
     string,
@@ -32,15 +31,18 @@ export async function getLessonProgressAction(
       progress,
     };
   } catch (error: any) {
-    console.error('❌ Error getting lesson progress:', error);
+    console.error("❌ Error getting lesson progress:", error);
 
-    if (error.message?.includes('unauthorized') || error.message?.includes('Unauthorized')) {
-      throw new Error('unauthorized');
+    if (
+      error.message?.includes("unauthorized") ||
+      error.message?.includes("Unauthorized")
+    ) {
+      throw new Error("unauthorized");
     }
 
     return {
       success: false,
-      errors: [error.message || 'An unexpected error occurred'],
+      errors: [error.message || "An unexpected error occurred"],
     };
   }
 }
@@ -66,16 +68,19 @@ export async function completeLessonAction(
 
     return await completeLesson(session.userId, courseId, lessonId);
   } catch (error: any) {
-    console.error('❌ Error completing lesson:', error);
+    console.error("❌ Error completing lesson:", error);
 
-    if (error.message?.includes('unauthorized') || error.message?.includes('Unauthorized')) {
-      throw new Error('unauthorized');
+    if (
+      error.message?.includes("unauthorized") ||
+      error.message?.includes("Unauthorized")
+    ) {
+      throw new Error("unauthorized");
     }
 
     return {
       success: false,
-      message: 'Failed to complete lesson',
-      errors: [error.message || 'An unexpected error occurred'],
+      message: "Failed to complete lesson",
+      errors: [error.message || "An unexpected error occurred"],
     };
   }
 }
@@ -101,16 +106,48 @@ export async function updateWatchedTimeAction(
       watchedSeconds
     );
   } catch (error: any) {
-    console.error('❌ Error updating watched time:', error);
+    console.error("❌ Error updating watched time:", error);
 
-    if (error.message?.includes('unauthorized') || error.message?.includes('Unauthorized')) {
-      throw new Error('unauthorized');
+    if (
+      error.message?.includes("unauthorized") ||
+      error.message?.includes("Unauthorized")
+    ) {
+      throw new Error("unauthorized");
     }
 
     return {
       success: false,
-      errors: [error.message || 'An unexpected error occurred'],
+      errors: [error.message || "An unexpected error occurred"],
     };
   }
 }
 
+/**
+ * Reset course progress for the current user
+ */
+export async function resetCourseProgressAction(courseId: string): Promise<{
+  success: boolean;
+  message: string;
+  errors?: string[];
+}> {
+  try {
+    const session = await requireAuth();
+
+    return await resetCourseProgress(session.userId, courseId);
+  } catch (error: any) {
+    console.error("❌ Error resetting course progress:", error);
+
+    if (
+      error.message?.includes("unauthorized") ||
+      error.message?.includes("Unauthorized")
+    ) {
+      throw new Error("unauthorized");
+    }
+
+    return {
+      success: false,
+      message: "Failed to reset course progress",
+      errors: [error.message || "An unexpected error occurred"],
+    };
+  }
+}
