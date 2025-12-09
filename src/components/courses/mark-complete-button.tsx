@@ -12,10 +12,9 @@ export function MarkCompleteButton({
   return (
     <button
       onClick={onComplete}
-      disabled={isCompleted}
       className={`px-6 py-3 rounded-lg font-semibold transition whitespace-nowrap w-full md:w-auto flex items-center gap-2 justify-center ${
         isCompleted
-          ? "bg-green-100 text-green-800 cursor-not-allowed"
+          ? "bg-green-100 text-green-800 hover:bg-green-200"
           : "bg-black text-white hover:opacity-90"
       }`}
     >
@@ -30,4 +29,3 @@ export function MarkCompleteButton({
     </button>
   );
 }
-

@@ -171,14 +171,20 @@ export default function CourseLearningPage({
     }
   };
 
-  const completeLesson = async () => {
+  const toggleLessonCompletion = async () => {
     const lessonId =
       courseData.modules[currentModule].lessons[currentLesson].id;
+
+    const currentlyCompleted = completedLessons.has(lessonId);
 
     // Optimistic update
     setCompletedLessons((prev) => {
       const updated = new Set(prev);
-      updated.add(lessonId);
+      if (currentlyCompleted) {
+        updated.delete(lessonId);
+      } else {
+        updated.add(lessonId);
+      }
       return updated;
     });
 
@@ -187,7 +193,7 @@ export default function CourseLearningPage({
       const response = await fetch(
         `/api/courses/${courseId}/lessons/${lessonId}/progress`,
         {
-          method: "POST",
+          method: currentlyCompleted ? "DELETE" : "POST",
           headers: {
             "Content-Type": "application/json",
           },
@@ -216,7 +222,11 @@ export default function CourseLearningPage({
         // Revert optimistic update on error
         setCompletedLessons((prev) => {
           const updated = new Set(prev);
-          updated.delete(lessonId);
+          if (currentlyCompleted) {
+            updated.add(lessonId);
+          } else {
+            updated.delete(lessonId);
+          }
           return updated;
         });
         return;
@@ -244,7 +254,11 @@ export default function CourseLearningPage({
       // Revert optimistic update on error
       setCompletedLessons((prev) => {
         const updated = new Set(prev);
-        updated.delete(lessonId);
+        if (currentlyCompleted) {
+          updated.add(lessonId);
+        } else {
+          updated.delete(lessonId);
+        }
         return updated;
       });
     }
@@ -391,7 +405,7 @@ export default function CourseLearningPage({
             moduleTitle={courseData.modules[currentModule].title}
             lesson={currentLessonData}
             isCompleted={isCurrentLessonCompleted}
-            onComplete={completeLesson}
+            onComplete={toggleLessonCompletion}
           />
 
           {/* Overall Progress Bar - Full Width - Under video */}

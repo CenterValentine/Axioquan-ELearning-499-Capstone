@@ -5,6 +5,7 @@ import {
   completeLessonAction,
   updateWatchedTimeAction,
   getLessonProgressAction,
+  resetLessonProgressAction,
 } from "@/lib/courses/progress-actions";
 
 interface RouteParams {
@@ -134,6 +135,43 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error: any) {
     console.error("API Error updating watched time:", error);
+
+    if (error.message?.includes("unauthorized")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE - Mark lesson as incomplete (reset completion)
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id: courseId, lessonId } = await params;
+
+    const result = await resetLessonProgressAction(courseId, lessonId);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: result.message || "Failed to reset lesson progress",
+          errors: result.errors || [],
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      message: result.message,
+      progress: result.progress,
+    });
+  } catch (error: any) {
+    console.error("API Error resetting lesson progress:", error);
 
     if (error.message?.includes("unauthorized")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
