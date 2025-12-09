@@ -55,6 +55,21 @@ const specialAwardsData = [
 export default function StudentCertificatesPage() {
   const [filter, setFilter] = useState("certificates")
 
+  const handleDownload = (certTitle: string) => {
+    // Simulate download PDF
+    alert(`Downloading certificate for "${certTitle}"...`);
+  }
+
+  const handleShare = (certTitle: string) => {
+    // Simulate share
+    alert(`Sharing certificate "${certTitle}"...`);
+  }
+
+  const handleVerify = (certId: string) => {
+    // Simulate verify
+    alert(`Certificate ${certId} is valid!`);
+  }
+
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -171,13 +186,22 @@ export default function StudentCertificatesPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
-                <button className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm md:text-base flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handleDownload(cert.title)}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm md:text-base flex items-center justify-center gap-2"
+                >
                   📥 Download PDF
                 </button>
-                <button className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm md:text-base">
+                <button
+                  onClick={() => handleShare(cert.title)}
+                  className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm md:text-base"
+                >
                   Share
                 </button>
-                <button className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm md:text-base">
+                 <button
+                  onClick={() => handleVerify(cert.certificateId)}
+                  className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm md:text-base"
+                >
                   Verify
                 </button>
               </div>
@@ -212,9 +236,17 @@ export default function StudentCertificatesPage() {
               Add certificates to your LinkedIn profile or download them as PDFs
             </p>
           </div>
-          <button className="flex-shrink-0 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm md:text-base whitespace-nowrap">
-            Share on LinkedIn
-          </button>
+          <button
+        className="flex-shrink-0 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm md:text-base whitespace-nowrap"
+        onClick={() => {
+          const url = encodeURIComponent("https://your-platform.com/dashboard/certificates");
+          const title = encodeURIComponent("Check out my achievements!");
+          const linkedInShare = `https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}`;
+          window.open(linkedInShare, "_blank");
+        }}
+      >
+        Share on LinkedIn
+      </button>
         </div>
       </div>
     </div>
